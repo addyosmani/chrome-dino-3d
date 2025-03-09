@@ -1,196 +1,209 @@
 "use strict";
 
-  // Keeps the state of keys/buttons
-  //
-  // You can check
-  //
-  //   inputManager.keys.left.down
-  //
-  // to see if the left key is currently held down
-  // and you can check
-  //
-  //   inputManager.keys.left.justPressed
-  //
-  // To see if the left key was pressed this frame
-  //
+/**
+ * InputManager - Handles keyboard input for the game
+ * 
+ * Tracks key states (down, justPressed, justReleased)
+ * and manages callbacks for key events
+ */
+class InputManager {
+  constructor() {
+    this.keys = {};
+    this.callbacks = {};
+    this.callbacksCounter = 0;
+    const keyMap = new Map();
 
-  class InputManager {
-    constructor() {
-      this.keys = {};
-      this.callbacks = [];
-      this.callbacks_i = 0;
-      const keyMap = new Map();
+    const setKey = (keyName, pressed) => {
+      const keyState = this.keys[keyName];
+      keyState.justPressed = pressed && !keyState.down;
+      keyState.down = pressed;
+      keyState.justReleased = !keyState.down && !pressed && !keyState.justReleased;
 
-      const setKey = (keyName, pressed) => {
-        const keyState = this.keys[keyName];
-        keyState.justPressed = pressed && !keyState.down;
-        keyState.down = pressed;
-        keyState.justReleased = !keyState.down && !pressed && !keyState.justReleased;
+      // Execute callbacks for justPressed events
+      if (keyState.justPressed && this.callbacks[keyName]?.length) {
+        for (const [index, callbackData] of Object.entries(this.callbacks[keyName])) {
+          if (callbackData.actionType === 'justPressed') {
+            callbackData.callback();
 
-        // callbacks
-        if(keyState.justPressed && this.callbacks[keyName].length) {
-          for(let i in this.callbacks[keyName]) {
-            if(this.callbacks[keyName][i].actionType == 'justPressed') {
-              this.callbacks[keyName][i].callback();
-
-              if(this.callbacks[keyName][i].maxCalls) {
-                this.callbacks[keyName][i].totalCalls++;
-                if(this.callbacks[keyName][i].totalCalls >= this.callbacks[keyName][i].maxCalls) {
-                  this.callbacks[keyName].splice(i, 1);
-                }
+            if (callbackData.maxCalls) {
+              callbackData.totalCalls++;
+              if (callbackData.totalCalls >= callbackData.maxCalls) {
+                this.callbacks[keyName].splice(index, 1);
               }
             }
           }
         }
-      };
-
-      const addKey = (keyCode, name) => {
-        this.keys[name] = { down: false, justPressed: false, justReleased: false, clock: new THREE.Clock() };
-        this.callbacks[name] = [];
-        keyMap.set(keyCode, name);
-      };
-
-      const setKeyFromKeyCode = (keyCode, pressed) => {
-        const keyName = keyMap.get(keyCode);
-        if (!keyName) {
-          return;
-        }
-        setKey(keyName, pressed);
-      };
-
-      this.addKeyCallback = (keyName, actionType, callback, calls = false) => {
-        this.callbacks_i++;
-        this.callbacks[keyName][this.callbacks_i] = {
-          "actionType": actionType,
-          "callback": callback,
-          "maxCalls": calls,
-          "totalCalls": 0
-        };
-
-        return this.callbacks_i;
       }
+    };
 
-      this.removeKeyCallback = (keyName, callback_i) => {
-        if(this.callbacks[keyName][callback_i]) {
-          this.callbacks[keyName].splice(callback_i, 1);
-        }
-      }
+    const addKey = (keyCode, name) => {
+      this.keys[name] = { 
+        down: false, 
+        justPressed: false, 
+        justReleased: false, 
+        clock: new THREE.Clock() 
+      };
+      this.callbacks[name] = [];
+      keyMap.set(keyCode, name);
+    };
 
-      // addKey(37, 'left');
-      // addKey(39, 'right');
-      // addKey(38, 'up');
-      addKey(40, 'down'); // down
-      // addKey(83, 'down'); // s
-      addKey(17, 'down'); // Ctrl
+    const setKeyFromKeyCode = (keyCode, pressed) => {
+      const keyName = keyMap.get(keyCode);
+      if (!keyName) return;
+      setKey(keyName, pressed);
+    };
 
-      // addKey(87, 'space'); // w
-      addKey(38, 'space'); // up
-      addKey(32, 'space'); // space
+    // Register game control keys
+    addKey(40, 'down'); // down arrow
+    addKey(17, 'down'); // Ctrl
+    addKey(38, 'space'); // up arrow
+    addKey(32, 'space'); // spacebar
+    addKey(81, 'debug_speedup'); // q
 
-      addKey(81, 'debug_speedup'); // q
+    // Event listeners
+    window.addEventListener('keydown', (e) => setKeyFromKeyCode(e.keyCode, true));
+    window.addEventListener('keyup', (e) => setKeyFromKeyCode(e.keyCode, false));
+  }
 
-      window.addEventListener('keydown', (e) => {
-        // console.log(e.keyCode);
-        setKeyFromKeyCode(e.keyCode, true);
-      });
- 
-      window.addEventListener('keyup', (e) => {
-        setKeyFromKeyCode(e.keyCode, false);
-      });
+  /**
+   * Add a callback for a key event
+   * @param {string} keyName - The name of the key
+   * @param {string} actionType - The type of action (e.g., 'justPressed')
+   * @param {Function} callback - The function to call
+   * @param {number|boolean} calls - Max number of calls, or false for unlimited
+   * @returns {number} - Callback ID for removal
+   */
+  addKeyCallback(keyName, actionType, callback, calls = false) {
+    this.callbacksCounter++;
+    this.callbacks[keyName][this.callbacksCounter] = {
+      actionType,
+      callback,
+      maxCalls: calls,
+      totalCalls: 0
+    };
+
+    return this.callbacksCounter;
+  }
+
+  /**
+   * Remove a callback by ID
+   * @param {string} keyName - The name of the key
+   * @param {number} callbackId - The ID of the callback to remove
+   */
+  removeKeyCallback(keyName, callbackId) {
+    if (this.callbacks[keyName][callbackId]) {
+      this.callbacks[keyName].splice(callbackId, 1);
     }
+  }
 
-    update() {
-      for (const keyState of Object.values(this.keys)) {
-        if (keyState.justPressed) {
-          keyState.clock.start();
-          keyState.justPressed = false;
-        }
+  /**
+   * Update key states (called each frame)
+   */
+  update() {
+    for (const keyState of Object.values(this.keys)) {
+      if (keyState.justPressed) {
+        keyState.clock.start();
+        keyState.justPressed = false;
+      }
 
-        if (keyState.justReleased) {
-          keyState.clock.stop();
-          keyState.clock.elapsedTime = 0;
-          keyState.justReleased = false;
-        }
+      if (keyState.justReleased) {
+        keyState.clock.stop();
+        keyState.clock.elapsedTime = 0;
+        keyState.justReleased = false;
       }
     }
   }
+}
 /**
- * Audio class.
- * @type {AudioManager}
+ * AudioManager - Handles game audio using Howler.js
  */
-
 class AudioManager {
-    constructor() {
-      this.base_path = config.base_path + 'sound/';
-      this.sounds = {
-        "score": new Howl({
-          src: [this.base_path + 'Pickup_Coin103.wav'],
-          preload: true,
-          autoplay: false,
-          loop: false,
-          volume: .3
-        }),
-        "highest_score": new Howl({
-          src: [this.base_path + 'Powerup33.wav'],
-          preload: true,
-          autoplay: false,
-          loop: false,
-          volume: .4
-        }),
-        "jump": new Howl({
-          src: [this.base_path + 'Jump24.wav'],
-          preload: true,
-          autoplay: false,
-          loop: false,
-          volume: .15
-        }),
-        "killed": new Howl({
-          src: [this.base_path + 'Randomize62.wav'],
-          preload: true,
-          autoplay: false,
-          loop: false,
-          volume: .15
-        }),
-        "bg": new Howl({
-          src: [this.base_path + 'ingame/Reloaded Games - Music.ogg'],
-          preload: true,
-          autoplay: false,
-          loop: true,
-          volume: .75
-        })
-      }
+  constructor() {
+    this.basePath = config.base_path + 'sound/';
+    this.sounds = {
+      score: new Howl({
+        src: [`${this.basePath}Pickup_Coin103.wav`],
+        preload: true,
+        autoplay: false,
+        loop: false,
+        volume: 0.3
+      }),
+      highest_score: new Howl({
+        src: [`${this.basePath}Powerup33.wav`],
+        preload: true,
+        autoplay: false,
+        loop: false,
+        volume: 0.4
+      }),
+      jump: new Howl({
+        src: [`${this.basePath}Jump24.wav`],
+        preload: true,
+        autoplay: false,
+        loop: false,
+        volume: 0.15
+      }),
+      killed: new Howl({
+        src: [`${this.basePath}Randomize62.wav`],
+        preload: true,
+        autoplay: false,
+        loop: false,
+        volume: 0.15
+      }),
+      bg: new Howl({
+        src: [`${this.basePath}ingame/Reloaded Games - Music.ogg`],
+        preload: true,
+        autoplay: false,
+        loop: true,
+        volume: 0.75
+      })
+    };
+  }
 
-      // detect any user interaction
-      // window.addEventListener('mousemove', this.autoplay);
-      // window.addEventListener('scroll', this.autoplay);
-      // window.addEventListener('keydown', this.autoplay);
-      // window.addEventListener('click', this.autoplay);
-      // window.addEventListener('touchstart', this.autoplay);
-    }
-
-    autoplay() {
-      if(!this.sounds['bg'].playing()) {
-        this.play('bg');
-      }
-    }
-
-    play(what) {
-      this.sounds[what].stop();
-      this.sounds[what].play();
-    }
-
-    stop(what) {
-      this.sounds[what].stop();
-    }
-
-    pause(what) {
-      this.sounds[what].pause();
-    }
-
-    resume(what) {
-      this.sounds[what].play();
+  /**
+   * Auto-play background music if not already playing
+   */
+  autoplay() {
+    if (!this.sounds.bg.playing()) {
+      this.play('bg');
     }
   }
+
+  /**
+   * Play a sound (stops it first if already playing)
+   * @param {string} soundName - The name of the sound to play
+   */
+  play(soundName) {
+    this.sounds[soundName].stop();
+    this.sounds[soundName].play();
+  }
+
+  /**
+   * Stop a sound
+   * @param {string} soundName - The name of the sound to stop
+   */
+  stop(soundName) {
+    this.sounds[soundName].stop();
+  }
+
+  /**
+   * Pause a sound
+   * @param {string} soundName - The name of the sound to pause
+   */
+  pause(soundName) {
+    this.sounds[soundName].pause();
+  }
+
+  /**
+   * Resume a paused sound
+   * @param {string} soundName - The name of the sound to resume
+   */
+  resume(soundName) {
+    this.sounds[soundName].play();
+  }
+}
+/**
+ * EnemyPool - Manages a pool of enemy objects for efficient reuse
+ */
 /**
  * Enemy class v4.
  * This enemy manager gererates N number of mesh groups(!) and puts them to pool.
