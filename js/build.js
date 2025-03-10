@@ -60,9 +60,34 @@ class InputManager {
     addKey(32, 'space'); // spacebar
     addKey(81, 'debug_speedup'); // q
 
-    // Event listeners
+    // Event listeners for keyboard support
     window.addEventListener('keydown', (e) => setKeyFromKeyCode(e.keyCode, true));
     window.addEventListener('keyup', (e) => setKeyFromKeyCode(e.keyCode, false));
+
+    // Mobile touch support
+    let touchStartTime = 0;
+    let isDucking = false;
+
+    window.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+            touchStartTime = Date.now();
+            setKeyFromKeyCode(32, true); // Simulate spacebar (jump)
+        } else if (e.touches.length === 2) {
+            isDucking = true;
+            setKeyFromKeyCode(40, true); // Simulate down arrow (duck)
+        }
+    });
+
+    window.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        if (isDucking) {
+            setKeyFromKeyCode(40, false); // Release ducking
+            isDucking = false;
+        } else {
+            setKeyFromKeyCode(32, false); // Release jump
+        }
+    });
   }
 
   /**
