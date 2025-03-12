@@ -1,61 +1,47 @@
 "use strict";
 
-// Function to dynamically import a module
-async function dynamicImport(modulePath) {
-  return import(`./${modulePath}`);
+//= input_manager.js
+//= audio_manager.js
+//= enemy_manager.js
+//= score_manager.js
+//= init.js
+//= camera_controls.js
+//= camera.js
+//= light.js
+//= particles.js
+
+//= log_manager.js
+let logs = new LogManager();
+if(config.logs) {
+	logs.enable();
 }
 
-// First batch of imports
-Promise.all([
-  dynamicImport('input_manager.js'),
-  dynamicImport('audio_manager.js'),
-  dynamicImport('enemy_manager.js'),
-  dynamicImport('score_manager.js'),
-  dynamicImport('init.js'),
-  dynamicImport('camera_controls.js'),
-  dynamicImport('camera.js'),
-  dynamicImport('light.js'),
-  dynamicImport('particles.js')
-]).then(async ([
-  inputModule,
-  audioModule,
-  enemyModule,
-  scoreModule,
-  initModule,
-  cameraControlsModule,
-  cameraModule,
-  lightModule,
-  particlesModule
-]) => {
-  // Load log_manager and initialize logs
-  const logModule = await dynamicImport('log_manager.js');
-  let logs = new logModule.LogManager();
-  if(config.logs) {
-    logs.enable();
-  }
+//= player_manager.js
+let player = new PlayerManager();
 
-  // Load player_manager and initialize player
-  const playerModule = await dynamicImport('player_manager.js');
-  let player = new playerModule.PlayerManager();
+//= nature_manager.js
+let nature = new NatureManager();
 
-  // Load nature_manager and initialize nature
-  const natureModule = await dynamicImport('nature_manager.js');
-  let nature = new natureModule.NatureManager();
+//= load_manager.js
+let load_manager = new LoadManager(); // start loading assets ASAP
+//= geometry/ground.js
+//= geometry/ground_bg.js
+//= geometry/dyno.js
+//= geometry/dyno_band.js
+//= geometry/dyno_wow.js
+//= geometry/cactus.js
+//= geometry/ptero.js
 
-  // Load load_manager and initialize load_manager
-  const loadManagerModule = await dynamicImport('load_manager.js');
-  let load_manager = new loadManagerModule.LoadManager(); // start loading assets ASAP
-  
-  // Load assets
-  await dynamicImport('assets.js');
+//= geometry/rocks.js
+//= geometry/flowers.js
+//= geometry/misc.js
 
-  // Load effects_manager and initialize effects
-  const effectsModule = await dynamicImport('effects_manager.js');
-  let effects = new effectsModule.EffectsManager();
+//= textures/ground.js
 
-  // Load game_manager and interface_manager, initialize game
-  const gameManagerModule = await dynamicImport('game_manager.js');
-  const interfaceManagerModule = await dynamicImport('interface_manager.js');
-  let game = new gameManagerModule.GameManager(new interfaceManagerModule.InterfaceManager());
-  game.init(); // init game & interface ASAP
-});
+//= effects_manager.js
+let effects = new EffectsManager();
+
+//= game_manager.js
+//= interface_manager.js
+let game = new GameManager(new InterfaceManager());
+game.init(); // init game & interface ASAP
