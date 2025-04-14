@@ -699,3 +699,37 @@ END // CHART'S RULES
     #score-counter > .score-counter-score.score-flash {
       -webkit-animation: blinker .5s step-start infinite;
       animation: blinker .5s step-start infinite; }
+
+#ai-feedback {
+  position: absolute;
+  bottom: 2%;
+  right: 2%;
+  background-color: rgba(255, 255, 255, 0.3);
+  padding: 20px;
+  max-width: 250px;
+  max-height: 250px;
+  width: 250px;
+  border-radius: 8px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+  color: #333;
+  font-family: Arial, sans-serif;
+  z-index: 1000;
+  text-align: center;
+}
+
+#ai-feedback h1 {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #5d7b88;
+  font-family: 'Press Start 2P', cursive;
+}
+
+#ai-feedback p {
+  max-width: 250px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-line;
+  text-align: left;
+  text-wrap: wrap;
+}

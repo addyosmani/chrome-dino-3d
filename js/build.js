@@ -497,7 +497,7 @@ class ScoreManager {
     this.lvl = 0;
     this.clock = new THREE.Clock();
     this.last_flash_score = 0;
-    Number.prototype.pad = function(size) {
+    Number.prototype.pad = function (size) {
       var s = String(this);
       while (s.length < (size || 2)) {
         s = "0" + s;
@@ -1455,9 +1455,9 @@ class LoadManager {
   constructor() {
     this.assets = {};
     this.vox = {};
-    this.onload = function() {
+    this.onload = function () {
     };
-    this.onassetload = function() {
+    this.onassetload = function () {
     };
   }
   set_status(what, status = true) {
@@ -1654,9 +1654,9 @@ class LoadManager {
   }
 }
 let load_manager = new LoadManager();
-load_manager.set_loader("ground", [], function() {
+load_manager.set_loader("ground", [], function () {
   let parser = new vox.Parser();
-  parser.parse(config.base_path + "objects/ground sand.vox").then(function(voxelData) {
+  parser.parse(config.base_path + "objects/ground sand.vox").then(function (voxelData) {
     let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
     let material = new THREE.MeshLambertMaterial();
     material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1665,9 +1665,9 @@ load_manager.set_loader("ground", [], function() {
     load_manager.set_status("ground", true);
   });
 });
-load_manager.set_loader("ground_bg", [], function() {
+load_manager.set_loader("ground_bg", [], function () {
   let parser = new vox.Parser();
-  parser.parse(config.base_path + "objects/ground sand solid.vox").then(function(voxelData) {
+  parser.parse(config.base_path + "objects/ground sand solid.vox").then(function (voxelData) {
     let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
     let material = new THREE.MeshLambertMaterial();
     material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1676,12 +1676,12 @@ load_manager.set_loader("ground_bg", [], function() {
     load_manager.set_status("ground_bg", true);
   });
 });
-load_manager.set_loader("dyno", ["ground"], function() {
+load_manager.set_loader("dyno", ["ground"], function () {
   let parser = new vox.Parser();
   let frames = [];
   let framesCount = 7;
   for (let i = 0; i <= framesCount; i++) {
-    parser.parse(config.base_path + "objects/t-rex/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/t-rex/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1697,12 +1697,12 @@ load_manager.set_loader("dyno", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("dyno_band", ["dyno"], function() {
+load_manager.set_loader("dyno_band", ["dyno"], function () {
   let parser = new vox.Parser();
   let frames = [];
   let framesCount = 7;
   for (let i = 0; i <= framesCount; i++) {
-    parser.parse(config.base_path + "objects/t-rex/band/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/t-rex/band/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1718,7 +1718,7 @@ load_manager.set_loader("dyno_band", ["dyno"], function() {
     });
   }
 });
-load_manager.set_loader("dyno_death", ["ground"], function() {
+load_manager.set_loader("dyno_death", ["ground"], function () {
   let parser = new vox.Parser();
   let frames = {
     "wow": null,
@@ -1727,7 +1727,7 @@ load_manager.set_loader("dyno_death", ["ground"], function() {
   let framesItems = Object.keys(frames);
   let loaded = 0;
   for (let i = 0; i < framesItems.length; i++) {
-    parser.parse(config.base_path + "objects/t-rex/other/" + framesItems[i] + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/t-rex/other/" + framesItems[i] + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1744,13 +1744,13 @@ load_manager.set_loader("dyno_death", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("cactus", ["ground"], function() {
+load_manager.set_loader("cactus", ["ground"], function () {
   let parser = new vox.Parser();
   scene.getObjectByName("ground");
   let cactus = [];
   let cactusFiles = ["cactus", "cactus_tall", "cactus_thin", "fcactus", "fcactus_tall", "fcactus_thin"];
   for (let i = 0; i <= cactusFiles.length - 1; i++) {
-    parser.parse(config.base_path + "objects/cactus/" + cactusFiles[i] + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/cactus/" + cactusFiles[i] + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.09 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1763,12 +1763,12 @@ load_manager.set_loader("cactus", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("ptero", ["ground", "cactus"], function() {
+load_manager.set_loader("ptero", ["ground", "cactus"], function () {
   let parser = new vox.Parser();
   let frames = [];
   let framesCount = 5;
   for (let i = 0; i <= framesCount; i++) {
-    parser.parse(config.base_path + "objects/ptero/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/ptero/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1781,12 +1781,12 @@ load_manager.set_loader("ptero", ["ground", "cactus"], function() {
     });
   }
 });
-load_manager.set_loader("rocks", ["ground"], function() {
+load_manager.set_loader("rocks", ["ground"], function () {
   let parser = new vox.Parser();
   let rocks = [];
   let rocksCount = 4;
   for (let i = 0; i <= rocksCount; i++) {
-    parser.parse(config.base_path + "objects/rocks/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/rocks/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1799,12 +1799,12 @@ load_manager.set_loader("rocks", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("flowers", ["ground"], function() {
+load_manager.set_loader("flowers", ["ground"], function () {
   let parser = new vox.Parser();
   let flowers = [];
   let flowersCount = 2;
   for (let i = 0; i <= flowersCount; i++) {
-    parser.parse(config.base_path + "objects/flowers/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/flowers/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1817,7 +1817,7 @@ load_manager.set_loader("flowers", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("misc", ["ground"], function() {
+load_manager.set_loader("misc", ["ground"], function () {
   let parser = new vox.Parser();
   let misc2 = [];
   let miscItems = [
@@ -1846,7 +1846,7 @@ load_manager.set_loader("misc", ["ground"], function() {
     "seaweed"
   ];
   for (let i = 0; i < miscItems.length; i++) {
-    parser.parse(config.base_path + "objects/misc/" + miscItems[i] + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/misc/" + miscItems[i] + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1860,12 +1860,12 @@ load_manager.set_loader("misc", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("t_ground", [], function() {
+load_manager.set_loader("t_ground", [], function () {
   let loader = new THREE.TextureLoader();
   let textures = {
     "top": null
   };
-  loader.load(config.base_path + "textures/ground_top.png", function(texture) {
+  loader.load(config.base_path + "textures/ground_top.png", function (texture) {
     texture.magFilter = THREE.NearestFilter;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.offset.set(0, 0);
@@ -1926,7 +1926,7 @@ class EffectsManager {
       "clock": new THREE.Clock()
     };
     if (!config.renderer.effects) {
-      this.update = function() {
+      this.update = function () {
       };
     }
   }
@@ -2059,12 +2059,38 @@ class GameManager {
     this.interface = interface_manager;
     this.starter = null;
     this.stats = null;
+    this.languageModel = null;
   }
   init() {
+    // Initialize language model if available
+    if ('ai' in self && 'languageModel' in self.ai) {
+      Promise.resolve().then(async () => {
+        try {
+          // Check capabilities of the language model
+          const capabilities = await self.ai.languageModel.capabilities();
+          console.log('Language model capabilities:', capabilities);
+
+          this.languageModel = await self.ai.languageModel.create({
+            temperature: 0.8,
+            topK: capabilities.defaultTopK
+          });
+
+          this.languageModel.addEventListener('downloadprogress', (e) => {
+            console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`);
+          });
+
+          console.log('Language model session created successfully');
+        } catch (err) {
+          console.error('AI language model error:', err);
+        }
+      });
+    } else {
+      console.warn('Chrome Prompt API not available');
+    }
     this.interface.init();
     visibly.visibilitychange(this.tabVisibilityChanged);
-    window.onload = function() {
-      load_manager.load_all(function() {
+    window.onload = function () {
+      load_manager.load_all(function () {
         game.interface.other.preloader.classList.add("hidden");
         if (config.debug) {
           game.interface.btnStartClick();
@@ -2072,27 +2098,88 @@ class GameManager {
           game.interface.buttons.start.classList.remove("hidden");
           game.setStarter();
         }
-      }, function() {
+      }, function () {
         let p = load_manager.getLoadPercentage();
         game.interface.indicators.load.classList.add("bar-" + p);
       });
     };
     if (config.debug) {
       enemy.config.enable_collisions = false;
-      input.addKeyCallback("debug_speedup", "justPressed", function() {
+      input.addKeyCallback("debug_speedup", "justPressed", function () {
         enemy.increase_velocity(1);
       });
       enemy.increase_velocity(10);
     }
   }
+  async generateGameSummary() {
+    if (!self.ai || !self.ai.languageModel) {
+      console.warn('Chrome Prompt API not available');
+      return;
+    }
+
+    const gameData = {
+      score: Math.floor(score.score),
+      highScore: Math.floor(score.highest_score),
+      timePlayed: Math.floor(clock.getElapsedTime()),
+    };
+
+    const systemPrompt = 'You are DinoCoach, a concise feedback assistant for the Chrome Dino Runner game. A game where the user has to jump or duck obstacles. There is no other functionality. The speed increases as the game goes on. The stats you receive are always from a SINGLE completed game run. "High Score" represents the player\'s best score across ALL previous games, NOT just the current run. Never make value judgments about whether the high score itself is good or bad - you have no benchmark for comparison. Focus on practical tips for jumping over cacti and ducking under pterodactyls based solely on score and survival time, but also be hopeful and fun in your answers. Keep responses under 75 words total.'
+
+    const prompt = `Chrome Dino Game - Latest Run Results:
+    Current Run Score: ${gameData.score}
+    Personal High Score: ${gameData.highScore}
+    Current Run Survival Time: ${gameData.timePlayed} seconds
+
+    Based ONLY on these metrics, provide:
+    1. A brief assessment comparing current score to personal high score. 
+    2. Two general tips to improve jumping/ducking timing for better survival.`
+
+    console.log(prompt)
+    try {
+      // Show loading state
+      const aiFeedbackDiv = document.getElementById('ai-feedback');
+      const aiFeedbackText = document.getElementById('ai-feedback-text');
+
+      aiFeedbackDiv.style.display = 'block';
+      aiFeedbackText.innerHTML = 'Analyzing your performance...';
+
+      if (!this.session) {
+        const capabilities = await self.ai.languageModel.capabilities();
+        this.session = await self.ai.languageModel.create({
+          temperature: 0.8,
+          topK: capabilities.defaultTopK,
+          systemPrompt: systemPrompt
+        });
+      }
+
+      const stream = await this.session.promptStreaming(prompt);
+
+      let result = '';
+      for await (const chunk of stream) {
+        result += chunk;
+      }
+
+      const summary = result;
+      console.log(summary)
+
+      // Update the UI
+      aiFeedbackText.innerHTML = summary;
+
+    } catch (error) {
+      console.error('Error generating game summary:', error);
+      // Show error in UI
+      const aiFeedbackText = document.getElementById('ai-feedback-text');
+      aiFeedbackText.innerHTML = 'Sorry, there was an error generating your summary. Please try again.';
+    }
+  }
   setStarter(timeout = 600) {
     if (!this.starter) {
-      this.starter = input.addKeyCallback("space", "justPressed", function() {
+      this.starter = input.addKeyCallback("space", "justPressed", function () {
         game.starter = null;
         audio.play("jump");
         if (timeout > 0) {
           game.interface.other.overlay.classList.add("before-start");
-          setTimeout(function() {
+          setTimeout(function () {
             game.interface.btnStartClick();
           }, timeout);
         } else {
@@ -2114,6 +2201,9 @@ class GameManager {
     this.isPlaying = true;
     enemy.increase_velocity(15, true);
     score.set(0);
+    clock.stop();
+    clock.elapsedTime = 0;
+    clock.start();
     nature.initGround();
     nature.initEarth();
     nature.initGroundDecoration("first", -17.3, nature.cache.earth.box.max.y);
@@ -2172,6 +2262,8 @@ class GameManager {
     player.deathFrame();
     audio.play("killed");
     this.setStarter(0);
+
+    this.generateGameSummary();
   }
   pause() {
     if (!this.isPlaying) {
@@ -2199,6 +2291,9 @@ class GameManager {
     score.reset();
     player.reset();
     effects.reset();
+    clock.stop();
+    clock.elapsedTime = 0;
+    clock.start();
     this.render();
   }
   restart() {
@@ -2248,7 +2343,7 @@ class GameManager {
     if (!this.isPlaying) {
       return false;
     }
-    requestAnimationFrame(function() {
+    requestAnimationFrame(function () {
       game.loop();
     });
     this.render();
