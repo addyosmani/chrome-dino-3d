@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +17,7 @@
 	<link rel="preload" as="image" href="media/3d-title.png">
 
 </head>
+
 <body>
 
 	<div id="preloader">
@@ -63,7 +65,9 @@
 
 	<div id="ai-feedback">
 		<h1>AI Game Summary</h1>
-		<p id="ai-feedback-text"></p>
+		<div id="ai-feedback-wrapper">
+			<p id="ai-feedback-text"></p>
+		</div>
 	</div>
 
 	<script src="libs/three/three.min.js"></script>
@@ -88,7 +92,8 @@
 
 	<script src="libs/visibly/visibly.js"></script>
 	<script src="js/config-high.js?patch=3x1"></script>
-	<script src="js/build.js"></script>
+	<script type="module" src="js/build.js"></script>
 
 </body>
+
 </html>

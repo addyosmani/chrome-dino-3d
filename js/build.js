@@ -2085,7 +2085,6 @@ class GameManager {
           console.log('Language model session created successfully');
         } catch (err) {
           console.error('AI language model error:', err);
-          this.initTransformersWorker();
         }
       });
     } else {
@@ -2118,6 +2117,11 @@ class GameManager {
   }
 
   initTransformersWorker() {
+    if (this.worker) {
+      console.warn('Transformers.js worker already initialized.');
+      return;
+    }
+
     try {
       console.log('Initializing Transformers.js worker...');
       this.worker = new Worker(new URL('./worker.js', import.meta.url), {
@@ -2131,33 +2135,32 @@ class GameManager {
 
       this.worker.onmessage = (e) => {
         const { status, output, data } = e.data;
-        console.log('Worker message:', status, data || output);
 
-        const aiFeedbackDiv = document.getElementById('ai-feedback');
         const aiFeedbackText = document.getElementById('ai-feedback-text');
 
         switch (status) {
           case 'loading':
-            aiFeedbackDiv.style.display = 'block';
             aiFeedbackText.innerHTML = data;
             break;
 
           case 'ready':
             console.log('Worker is ready');
             this.workerReady = true;
+            aiFeedbackText.innerHTML = 'Ready';
             break;
 
           case 'start':
-            aiFeedbackDiv.style.display = 'block';
-            aiFeedbackText.innerHTML = 'Analyzing your performance...';
+            aiFeedbackText.innerHTML = '';
             break;
 
           case 'update':
-            aiFeedbackText.innerHTML = output;
+            aiFeedbackText.innerHTML += output;
             break;
 
           case 'complete':
-            aiFeedbackText.innerHTML = output;
+            // Extract just the assistant's message
+            const match = output[0].match(/<\|assistant\|>(.*?)<\|end\|>/s);
+            aiFeedbackText.innerHTML = match ? match[1].trim() : output[0];
             break;
 
           case 'error':
@@ -2183,7 +2186,7 @@ class GameManager {
       timePlayed: Math.floor(clock.getElapsedTime()),
     };
 
-    const systemPrompt = 'You are DinoCoach, a concise feedback assistant for the Chrome Dino Runner game. A game where the user has to jump or duck obstacles. There is no other functionality. The speed increases as the game goes on. The stats you receive are always from a SINGLE completed game run. "High Score" represents the player\'s best score across ALL previous games, NOT just the current run. Never make value judgments about whether the high score itself is good or bad - you have no benchmark for comparison. Focus on practical tips for jumping over cacti and ducking under pterodactyls based solely on score and survival time, but also be hopeful and fun in your answers. Keep responses under 75 words total.';
+    const systemPrompt = 'You are DinoCoach, a concise feedback assistant for the Chrome Dino Runner game. A 2D game where the user plays as a Dino and has to jump or duck obstacles. There is no other functionality. The speed increases as the game goes on. The stats you receive are always from a SINGLE completed game run. "High Score" represents the player\'s best score across ALL previous games, NOT just the current run. Never make value judgments about whether the high score itself is good or bad - you have no benchmark for comparison. Focus on practical tips for jumping over cacti and ducking under pterodactyls based solely on score and survival time, but also be hopeful and fun in your answers.';
 
     const prompt = `Chrome Dino Game - Latest Run Results:
     Current Run Score: ${gameData.score}
@@ -2192,17 +2195,16 @@ class GameManager {
 
     Based ONLY on these metrics, provide:
     1. A brief assessment comparing current score to personal high score. 
-    2. Two general tips to improve jumping/ducking timing for better survival.`;
+    2. Two general tips to improve jumping/ducking timing for better survival.
+    Keep your response under 100 words total.`;
 
     console.log(prompt);
 
     try {
       if (this.languageModel) {
         // Use Chrome Prompt API
-        const aiFeedbackDiv = document.getElementById('ai-feedback');
         const aiFeedbackText = document.getElementById('ai-feedback-text');
 
-        aiFeedbackDiv.style.display = 'block';
         aiFeedbackText.innerHTML = 'Analyzing your performance...';
 
         if (!this.session) {
