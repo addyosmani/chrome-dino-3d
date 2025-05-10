@@ -12,7 +12,7 @@
 
 //= log_manager.js
 let logs = new LogManager();
-if(config.logs) {
+if (config.logs) {
 	logs.enable();
 }
 
@@ -43,5 +43,5 @@ let effects = new EffectsManager();
 
 //= game_manager.js
 //= interface_manager.js
-let game = new GameManager(new InterfaceManager());
-game.init(); // init game & interface ASAP
+// let game = new GameManager(new InterfaceManager());
+// game.init(); // init game & interface ASAP
