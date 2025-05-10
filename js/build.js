@@ -2120,7 +2120,9 @@ class GameManager {
   initTransformersWorker() {
     try {
       console.log('Initializing Transformers.js worker...');
-      this.worker = new Worker('js/worker.js', { type: 'module' });
+      this.worker = new Worker(new URL('./worker.js', import.meta.url), {
+        type: 'module'
+      });
 
       this.worker.onerror = (error) => {
         console.error('Worker error:', error);
