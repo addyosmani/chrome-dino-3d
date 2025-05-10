@@ -2060,7 +2060,10 @@ class GameManager {
     this.starter = null;
     this.stats = null;
     this.languageModel = null;
+    this.worker = null;
+    this.workerReady = false;
   }
+
   init() {
     // Initialize language model if available
     if ('ai' in self && 'languageModel' in self.ai) {
@@ -2082,10 +2085,12 @@ class GameManager {
           console.log('Language model session created successfully');
         } catch (err) {
           console.error('AI language model error:', err);
+          this.initTransformersWorker();
         }
       });
     } else {
-      console.warn('Chrome Prompt API not available');
+      console.warn('Chrome Prompt API not available, using Transformers.js');
+      this.initTransformersWorker();
     }
     this.interface.init();
     visibly.visibilitychange(this.tabVisibilityChanged);
@@ -2111,19 +2116,72 @@ class GameManager {
       enemy.increase_velocity(10);
     }
   }
-  async generateGameSummary() {
-    if (!self.ai || !self.ai.languageModel) {
-      console.warn('Chrome Prompt API not available');
-      return;
-    }
 
+  initTransformersWorker() {
+    try {
+      console.log('Initializing Transformers.js worker...');
+      this.worker = new Worker('js/worker.js', { type: 'module' });
+
+      this.worker.onerror = (error) => {
+        console.error('Worker error:', error);
+        this.workerReady = false;
+      };
+
+      this.worker.onmessage = (e) => {
+        const { status, output, data } = e.data;
+        console.log('Worker message:', status, data || output);
+
+        const aiFeedbackDiv = document.getElementById('ai-feedback');
+        const aiFeedbackText = document.getElementById('ai-feedback-text');
+
+        switch (status) {
+          case 'loading':
+            aiFeedbackDiv.style.display = 'block';
+            aiFeedbackText.innerHTML = data;
+            break;
+
+          case 'ready':
+            console.log('Worker is ready');
+            this.workerReady = true;
+            break;
+
+          case 'start':
+            aiFeedbackDiv.style.display = 'block';
+            aiFeedbackText.innerHTML = 'Analyzing your performance...';
+            break;
+
+          case 'update':
+            aiFeedbackText.innerHTML = output;
+            break;
+
+          case 'complete':
+            aiFeedbackText.innerHTML = output;
+            break;
+
+          case 'error':
+            console.error('Worker error:', data);
+            aiFeedbackText.innerHTML = 'Error generating summary. Please try again.';
+            break;
+        }
+      };
+
+      // Start loading the model
+      console.log('Sending load message to worker...');
+      this.worker.postMessage({ type: 'load' });
+    } catch (error) {
+      console.error('Failed to initialize worker:', error);
+      this.workerReady = false;
+    }
+  }
+
+  async generateGameSummary() {
     const gameData = {
       score: Math.floor(score.score),
       highScore: Math.floor(score.highest_score),
       timePlayed: Math.floor(clock.getElapsedTime()),
     };
 
-    const systemPrompt = 'You are DinoCoach, a concise feedback assistant for the Chrome Dino Runner game. A game where the user has to jump or duck obstacles. There is no other functionality. The speed increases as the game goes on. The stats you receive are always from a SINGLE completed game run. "High Score" represents the player\'s best score across ALL previous games, NOT just the current run. Never make value judgments about whether the high score itself is good or bad - you have no benchmark for comparison. Focus on practical tips for jumping over cacti and ducking under pterodactyls based solely on score and survival time, but also be hopeful and fun in your answers. Keep responses under 75 words total.'
+    const systemPrompt = 'You are DinoCoach, a concise feedback assistant for the Chrome Dino Runner game. A game where the user has to jump or duck obstacles. There is no other functionality. The speed increases as the game goes on. The stats you receive are always from a SINGLE completed game run. "High Score" represents the player\'s best score across ALL previous games, NOT just the current run. Never make value judgments about whether the high score itself is good or bad - you have no benchmark for comparison. Focus on practical tips for jumping over cacti and ducking under pterodactyls based solely on score and survival time, but also be hopeful and fun in your answers. Keep responses under 75 words total.';
 
     const prompt = `Chrome Dino Game - Latest Run Results:
     Current Run Score: ${gameData.score}
@@ -2132,39 +2190,54 @@ class GameManager {
 
     Based ONLY on these metrics, provide:
     1. A brief assessment comparing current score to personal high score. 
-    2. Two general tips to improve jumping/ducking timing for better survival.`
+    2. Two general tips to improve jumping/ducking timing for better survival.`;
 
-    console.log(prompt)
+    console.log(prompt);
+
     try {
-      // Show loading state
-      const aiFeedbackDiv = document.getElementById('ai-feedback');
-      const aiFeedbackText = document.getElementById('ai-feedback-text');
+      if (this.languageModel) {
+        // Use Chrome Prompt API
+        const aiFeedbackDiv = document.getElementById('ai-feedback');
+        const aiFeedbackText = document.getElementById('ai-feedback-text');
 
-      aiFeedbackDiv.style.display = 'block';
-      aiFeedbackText.innerHTML = 'Analyzing your performance...';
+        aiFeedbackDiv.style.display = 'block';
+        aiFeedbackText.innerHTML = 'Analyzing your performance...';
 
-      if (!this.session) {
-        const capabilities = await self.ai.languageModel.capabilities();
-        this.session = await self.ai.languageModel.create({
-          temperature: 0.8,
-          topK: capabilities.defaultTopK,
-          systemPrompt: systemPrompt
+        if (!this.session) {
+          const capabilities = await self.ai.languageModel.capabilities();
+          this.session = await self.ai.languageModel.create({
+            temperature: 0.8,
+            topK: capabilities.defaultTopK,
+            systemPrompt: systemPrompt
+          });
+        }
+
+        const stream = await this.session.promptStreaming(prompt);
+
+        let result = '';
+        for await (const chunk of stream) {
+          result += chunk;
+        }
+
+        const summary = result;
+        console.log(summary);
+
+        // Update the UI
+        aiFeedbackText.innerHTML = summary;
+      } else if (this.worker && this.workerReady) {
+        // Use Transformers.js
+        const messages = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ];
+
+        this.worker.postMessage({
+          type: 'generate',
+          data: messages
         });
+      } else {
+        throw new Error('No AI model available');
       }
-
-      const stream = await this.session.promptStreaming(prompt);
-
-      let result = '';
-      for await (const chunk of stream) {
-        result += chunk;
-      }
-
-      const summary = result;
-      console.log(summary)
-
-      // Update the UI
-      aiFeedbackText.innerHTML = summary;
-
     } catch (error) {
       console.error('Error generating game summary:', error);
       // Show error in UI
