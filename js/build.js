@@ -2066,29 +2066,35 @@ class GameManager {
 
   init() {
     // Initialize language model if available
-    if ('ai' in self && 'languageModel' in self.ai) {
+    if ('LanguageModel' in self) {
       Promise.resolve().then(async () => {
         try {
-          // Check capabilities of the language model
-          const capabilities = await self.ai.languageModel.capabilities();
-          console.log('Language model capabilities:', capabilities);
+          // Check availability and capabilities
+          const { available, defaultTemperature, defaultTopK, maxTopK } = await LanguageModel.params();
 
-          this.languageModel = await self.ai.languageModel.create({
-            temperature: 0.8,
-            topK: capabilities.defaultTopK
-          });
+          if (available !== "no") {
+            this.languageModel = await LanguageModel.create({
+              temperature: defaultTemperature,
+              topK: defaultTopK,
+              monitor(m) {
+                m.addEventListener("downloadprogress", e => {
+                  console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`);
+                });
+              }
+            });
 
-          this.languageModel.addEventListener('downloadprogress', (e) => {
-            console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`);
-          });
-
-          console.log('Language model session created successfully');
+            console.log('Language model session created successfully');
+          } else {
+            console.warn('Chrome Language Model not available, using Transformers.js');
+            this.initTransformersWorker();
+          }
         } catch (err) {
           console.error('AI language model error:', err);
+          this.initTransformersWorker();
         }
       });
     } else {
-      console.warn('Chrome Prompt API not available, using Transformers.js');
+      console.warn('Chrome Language Model not available, using Transformers.js');
       this.initTransformersWorker();
     }
     this.interface.init();
@@ -2204,30 +2210,34 @@ class GameManager {
       if (this.languageModel) {
         // Use Chrome Prompt API
         const aiFeedbackText = document.getElementById('ai-feedback-text');
-
         aiFeedbackText.innerHTML = 'Analyzing your performance...';
 
         if (!this.session) {
-          const capabilities = await self.ai.languageModel.capabilities();
-          this.session = await self.ai.languageModel.create({
+          this.session = await LanguageModel.create({
+            initialPrompts: [{
+              role: 'system',
+              content: systemPrompt
+            }],
             temperature: 0.8,
-            topK: capabilities.defaultTopK,
-            systemPrompt: systemPrompt
+            topK: (await LanguageModel.params()).defaultTopK
           });
         }
 
-        const stream = await this.session.promptStreaming(prompt);
-
+        const stream = this.session.promptStreaming(prompt);
         let result = '';
+
+        // Clear the initial message
+        aiFeedbackText.innerHTML = '';
+
         for await (const chunk of stream) {
           result += chunk;
+          // Update UI with each chunk
+          aiFeedbackText.innerHTML = result;
         }
 
-        const summary = result;
-        console.log(summary);
+        console.log(result);
+        aiFeedbackText.innerHTML = result;
 
-        // Update the UI
-        aiFeedbackText.innerHTML = summary;
       } else if (this.worker && this.workerReady) {
         // Use Transformers.js
         const messages = [
@@ -2244,7 +2254,6 @@ class GameManager {
       }
     } catch (error) {
       console.error('Error generating game summary:', error);
-      // Show error in UI
       const aiFeedbackText = document.getElementById('ai-feedback-text');
       aiFeedbackText.innerHTML = 'Sorry, there was an error generating your summary. Please try again.';
     }
