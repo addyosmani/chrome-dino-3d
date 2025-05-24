@@ -2074,7 +2074,7 @@ class GameManager {
 
           if (available !== "no") {
             this.languageModel = await LanguageModel.create({
-              temperature: defaultTemperature,
+              temperature: 0.2,
               topK: defaultTopK,
               monitor(m) {
                 m.addEventListener("downloadprogress", e => {
