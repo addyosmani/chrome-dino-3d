@@ -68,20 +68,38 @@ class TextGenerationPipeline {
     // Track files being downloaded for each component
     const progressState = {
       model: {
-        totalBytes: 0,
-        loadedBytes: 0,
+        files: new Map(),
         totalProgress: 0,
         status: 'pending',
       },
     };
 
+
     const createProgressCallback = (component) => (progress) => {
       const state = progressState[component];
 
       if (progress.status === 'progress') {
-        state.loadedBytes = progress.loaded;
-        state.totalBytes = progress.total;
-        state.totalProgress = (progress.loaded / progress.total) * 100;
+        const file = progress.file || 'unknown';
+        const existing = state.files.get(file) || { loaded: 0, total: progress.total };
+
+        // Only update if there's more progress
+        if (progress.loaded > existing.loaded) {
+          state.files.set(file, {
+            loaded: progress.loaded,
+            total: progress.total,
+          });
+        }
+
+        // Compute total loaded and total bytes
+        let loadedSum = 0;
+        let totalSum = 0;
+
+        for (const { loaded, total } of state.files.values()) {
+          loadedSum += loaded;
+          totalSum += total;
+        }
+
+        state.totalProgress = (loadedSum / totalSum) * 100;
         state.status = 'progress';
       } else if (progress.status === 'done') {
         state.totalProgress = 100;
@@ -91,7 +109,7 @@ class TextGenerationPipeline {
       if (progress_callback && component === 'model') {
         progress_callback({
           progress: Math.round(state.totalProgress),
-          status: state.status
+          status: state.status,
         });
       }
     };
