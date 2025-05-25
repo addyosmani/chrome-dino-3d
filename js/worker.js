@@ -65,16 +65,46 @@ class TextGenerationPipeline {
       ? 'Xenova/Phi-3-mini-4k-instruct_fp16'
       : 'Xenova/Phi-3-mini-4k-instruct';
 
+    // Track files being downloaded for each component
+    const progressState = {
+      model: {
+        totalBytes: 0,
+        loadedBytes: 0,
+        totalProgress: 0,
+        status: 'pending',
+      },
+    };
+
+    const createProgressCallback = (component) => (progress) => {
+      const state = progressState[component];
+
+      if (progress.status === 'progress') {
+        state.loadedBytes = progress.loaded;
+        state.totalBytes = progress.total;
+        state.totalProgress = (progress.loaded / progress.total) * 100;
+        state.status = 'progress';
+      } else if (progress.status === 'done') {
+        state.totalProgress = 100;
+        state.status = 'done';
+      }
+
+      if (progress_callback && component === 'model') {
+        progress_callback({
+          progress: Math.round(state.totalProgress),
+          status: state.status
+        });
+      }
+    };
+
     this.tokenizer ??= AutoTokenizer.from_pretrained(this.model_id, {
       legacy: true,
-      progress_callback,
     });
 
     this.model ??= AutoModelForCausalLM.from_pretrained(this.model_id, {
       dtype: 'q4',
       device: 'webgpu',
       use_external_data_format: true,
-      progress_callback,
+      progress_callback: createProgressCallback('model'),
     });
 
     return Promise.all([this.tokenizer, this.model]);
@@ -128,17 +158,19 @@ async function generate(messages) {
 async function load() {
   self.postMessage({
     status: 'loading',
-    data: 'Loading model...'
+    data: 'Loading model components...'
   });
 
   // Load the pipeline and save it for future use.
   const [tokenizer, model] = await TextGenerationPipeline.getInstance(progress => {
-    // Format progress message
-    let message = 'Loading model...';
-    if (progress.status === 'progress') {
-      message = `Loading model: ${Math.round(progress.progress)}%`;
-    } else if (progress.status === 'done') {
-      message = 'Model loaded successfully';
+    let message;
+
+    if (progress.status === 'done') {
+      message = 'All components loaded successfully';
+    } else if (progress.status === 'pending') {
+      message = 'Initializing download...';
+    } else {
+      message = `Loading model: ${progress.progress}%`;
     }
 
     self.postMessage({
@@ -157,6 +189,7 @@ async function load() {
   await model.generate({ ...inputs, max_new_tokens: 1 });
   self.postMessage({ status: 'ready' });
 }
+
 // Listen for messages from the main thread
 self.addEventListener('message', async (e) => {
   const { type, data } = e.data;

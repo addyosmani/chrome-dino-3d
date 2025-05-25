@@ -2076,11 +2076,6 @@ class GameManager {
             this.languageModel = await LanguageModel.create({
               temperature: 0.2,
               topK: defaultTopK,
-              monitor(m) {
-                m.addEventListener("downloadprogress", e => {
-                  console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`);
-                });
-              }
             });
 
             console.log('Language model session created successfully');
@@ -2218,7 +2213,7 @@ class GameManager {
               role: 'system',
               content: systemPrompt
             }],
-            temperature: 0.8,
+            temperature: 0.4,
             topK: (await LanguageModel.params()).defaultTopK
           });
         }
