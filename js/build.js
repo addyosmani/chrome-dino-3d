@@ -2194,7 +2194,7 @@ class GameManager {
 
           case 'complete':
             // Extract just the assistant's message
-            const match = output[0].match(/<\|assistant\|>(.*?)<\|end\|>/s);
+            const match = output[0].match(/<\|im_start\|>assistant\s*(.*?)<\|im_end\|>/s);
             aiFeedbackText.innerHTML = match ? match[1].trim() : output[0];
             break;
 
@@ -2228,12 +2228,12 @@ class GameManager {
     const systemPrompt = 'You are DinoCoach, a concise feedback assistant for the Chrome Dino Runner game. A 2D game where the user plays as a Dino and has to jump or duck obstacles. There is no other functionality. The speed increases as the game goes on. The stats you receive are always from a SINGLE completed game run. "High Score" represents the player\'s best score across ALL previous games, NOT just the current run. Never make value judgments about whether the high score itself is good or bad - you have no benchmark for comparison. Focus on practical tips for jumping over cacti and ducking under pterodactyls based solely on score and survival time, but also be hopeful and fun in your answers.';
 
     const prompt = `Chrome Dino Game - Latest Run Results:
-    Current Run Score: ${gameData.score}
     Personal High Score: ${gameData.highScore}
+    Current Run Score: ${gameData.score}
     Current Run Survival Time: ${gameData.timePlayed} seconds
 
     Based ONLY on these metrics, provide:
-    1. A brief assessment comparing current score to personal high score. 
+    1. A brief assessment comparing current score to personal high score.
     2. Two general tips to improve jumping/ducking timing for better survival.
     Keep your response under 100 words total.`;
 
