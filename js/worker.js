@@ -85,8 +85,8 @@ class TextGenerationPipeline {
 
     // Choose the model based on whether fp16 is available
     this.model_id ??= (await hasFp16())
-      ? 'Xenova/Phi-3-mini-4k-instruct_fp16'
-      : 'Xenova/Phi-3-mini-4k-instruct';
+      ? 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
+      : 'HuggingFaceTB/SmolLM2-1.7B-Instruct';
 
     // Track files being downloaded for each component
     const progressState = {
@@ -142,9 +142,9 @@ class TextGenerationPipeline {
 
     try {
       this.model ??= AutoModelForCausalLM.from_pretrained(this.model_id, {
-        dtype: 'q4',
+        dtype: 'q4f16',
         device: this.device,
-        use_external_data_format: true,
+        // use_external_data_format: true,
         progress_callback: createProgressCallback('model'),
       });
     } catch (error) {
