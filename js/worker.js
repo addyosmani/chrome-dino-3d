@@ -50,6 +50,18 @@ async function hasFp16() {
   }
 }
 
+async function hasWebGPU() {
+  try {
+    if (!navigator.gpu) {
+      return false;
+    }
+    const adapter = await navigator.gpu.requestAdapter();
+    return !!adapter;
+  } catch (e) {
+    return false;
+  }
+}
+
 /**
 * This class uses the Singleton pattern to ensure that only one instance of the model is loaded.
 */
@@ -58,8 +70,19 @@ class TextGenerationPipeline {
   static model = null;
   static tokenizer = null;
   static streamer = null;
+  static device = 'webgpu'; // Default device
 
   static async getInstance(progress_callback = null) {
+    // Check WebGPU support first
+    const webgpuSupported = await hasWebGPU();
+    if (!webgpuSupported) {
+      self.postMessage({
+        status: 'error',
+        data: 'WebGPU is not supported on this device. Please use a browser that supports WebGPU.'
+      });
+      return;
+    }
+
     // Choose the model based on whether fp16 is available
     this.model_id ??= (await hasFp16())
       ? 'Xenova/Phi-3-mini-4k-instruct_fp16'
@@ -73,7 +96,6 @@ class TextGenerationPipeline {
         status: 'pending',
       },
     };
-
 
     const createProgressCallback = (component) => (progress) => {
       const state = progressState[component];
@@ -118,12 +140,20 @@ class TextGenerationPipeline {
       legacy: true,
     });
 
-    this.model ??= AutoModelForCausalLM.from_pretrained(this.model_id, {
-      dtype: 'q4',
-      device: 'webgpu',
-      use_external_data_format: true,
-      progress_callback: createProgressCallback('model'),
-    });
+    try {
+      this.model ??= AutoModelForCausalLM.from_pretrained(this.model_id, {
+        dtype: 'q4',
+        device: this.device,
+        use_external_data_format: true,
+        progress_callback: createProgressCallback('model'),
+      });
+    } catch (error) {
+      self.postMessage({
+        status: 'error',
+        data: `Failed to load AI model: ${error.message}. This may be due to WebGPU compatibility issues.`
+      });
+      return;
+    }
 
     return Promise.all([this.tokenizer, this.model]);
   }
@@ -174,13 +204,28 @@ async function generate(messages) {
 }
 
 async function load() {
+  // Check WebGPU support before attempting to load
+  const webgpuSupported = await hasWebGPU();
+  if (!webgpuSupported) {
+    self.postMessage({
+      status: 'error',
+      data: 'WebGPU not supported.'
+    });
+    return;
+  }
+
+  self.postMessage({
+    status: 'loading',
+    data: 'Checking device compatibility...'
+  });
+
   self.postMessage({
     status: 'loading',
     data: 'Loading model components...'
   });
 
   // Load the pipeline and save it for future use.
-  const [tokenizer, model] = await TextGenerationPipeline.getInstance(progress => {
+  const result = await TextGenerationPipeline.getInstance(progress => {
     let message;
 
     if (progress.status === 'done') {
@@ -197,15 +242,29 @@ async function load() {
     });
   });
 
+  // If getInstance returned early due to error, don't continue
+  if (!result) {
+    return;
+  }
+
+  const [tokenizer, model] = result;
+
   self.postMessage({
     status: 'loading',
     data: 'Compiling shaders and warming up model...'
   });
 
-  // Run model with dummy input to compile shaders
-  const inputs = tokenizer('a');
-  await model.generate({ ...inputs, max_new_tokens: 1 });
-  self.postMessage({ status: 'ready' });
+  try {
+    // Run model with dummy input to compile shaders
+    const inputs = tokenizer('a');
+    await model.generate({ ...inputs, max_new_tokens: 1 });
+    self.postMessage({ status: 'ready' });
+  } catch (error) {
+    self.postMessage({
+      status: 'error',
+      data: `Failed to initialize model: ${error.message}`
+    });
+  }
 }
 
 // Listen for messages from the main thread

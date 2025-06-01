@@ -55,12 +55,6 @@ class InputManager {
     addKey(38, "space");
     addKey(32, "space");
     addKey(81, "debug_speedup");
-    window.addEventListener("keydown", (e) => {
-      setKeyFromKeyCode(e.keyCode, true);
-    });
-    window.addEventListener("keyup", (e) => {
-      setKeyFromKeyCode(e.keyCode, false);
-    });
     // Event listeners for keyboard supportAdd commentMore actions
     window.addEventListener('keydown', (e) => setKeyFromKeyCode(e.keyCode, true));
     window.addEventListener('keyup', (e) => setKeyFromKeyCode(e.keyCode, false));
@@ -2160,6 +2154,18 @@ class GameManager {
       this.worker.onerror = (error) => {
         console.error('Worker error:', error);
         this.workerReady = false;
+        const aiFeedbackText = document.getElementById('ai-feedback-text');
+        if (aiFeedbackText) {
+          aiFeedbackText.innerHTML = 'AI features are currently unavailable on this device';
+          aiFeedbackText.style.color = '#ff6b6b';
+
+          setTimeout(() => {
+            const aiFeedback = document.getElementById('ai-feedback');
+            if (aiFeedback) {
+              aiFeedback.style.display = 'none';
+            }
+          }, 2000);
+        }
       };
 
       this.worker.onmessage = (e) => {
@@ -2205,6 +2211,10 @@ class GameManager {
     } catch (error) {
       console.error('Failed to initialize worker:', error);
       this.workerReady = false;
+      const aiFeedbackText = document.getElementById('ai-feedback-text');
+      if (aiFeedbackText) {
+        aiFeedbackText.innerHTML = 'Failed to initialize AI worker. This may be due to browser compatibility issues';
+      }
     }
   }
 
