@@ -10,11 +10,17 @@ export default defineConfig({
     // Specify the entry point - use the actual source file
     rollupOptions: {
       input: {
-        main: './index.html'
+        main: './index.html',
+        worker: './js/worker.js'
       },
       output: {
         // Keep the same structure in dist
-        entryFileNames: 'js/build.js',
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'worker') {
+            return 'js/worker.js';
+          }
+          return 'js/build.js';
+        },
         assetFileNames: 'assets/[name]-[hash][extname]',
         chunkFileNames: 'assets/[name]-[hash].js'
       },
@@ -58,10 +64,6 @@ export default defineConfig({
         },
         {
           src: 'js/config-low.js',
-          dest: 'js'
-        },
-        {
-          src: 'js/worker.js',
           dest: 'js'
         }
       ]

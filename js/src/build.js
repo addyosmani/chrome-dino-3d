@@ -43,5 +43,5 @@ let effects = new EffectsManager();
 
 //= game_manager.js
 //= interface_manager.js
-// let game = new GameManager(new InterfaceManager());
-// game.init(); // init game & interface ASAP
+let game = new GameManager(new InterfaceManager());
+game.init();
