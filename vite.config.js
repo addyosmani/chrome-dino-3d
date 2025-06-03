@@ -24,6 +24,12 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash][extname]',
         chunkFileNames: 'assets/[name]-[hash].js'
       },
+      external: (id) => {
+        // Don't treat the worker as external when referenced from main
+        if (id.includes('worker.js')) {
+          return false;
+        }
+      }
     },
     // Copy public assets and additional directories
     copyPublicDir: false,
@@ -68,5 +74,9 @@ export default defineConfig({
         }
       ]
     })
-  ]
+  ],
+  // Ensure worker modules are handled correctly
+  worker: {
+    format: 'es'
+  }
 });

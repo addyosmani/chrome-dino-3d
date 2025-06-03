@@ -2149,17 +2149,9 @@ class GameManager {
     try {
       console.log('Initializing Transformers.js worker...');
 
-      // Try different worker paths for different deployment scenarios
-      let workerPath;
-      try {
-        // First try relative path (works in most cases)
-        workerPath = new URL('./worker.js', import.meta.url);
-        console.log('Using relative worker path:', workerPath.href);
-      } catch (e) {
-        // Fallback to absolute path
-        workerPath = './js/worker.js';
-        console.log('Using absolute worker path:', workerPath);
-      }
+      // Use the direct path to the bundled worker
+      const workerPath = './js/worker.js';
+      console.log('Using worker path:', workerPath);
 
       this.worker = new Worker(workerPath, {
         type: 'module'
