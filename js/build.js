@@ -2088,8 +2088,8 @@ class GameManager {
 
   init() {
     // Initialize language model if available
-    
-    if ('LanguageModel' in self) {
+
+    if ('d' in self) {
       Promise.resolve().then(async () => {
         try {
           // Check availability and capabilities
