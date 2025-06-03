@@ -2148,8 +2148,7 @@ class GameManager {
 
     try {
       console.log('Initializing Transformers.js worker...');
-      // Use the bundled worker path
-      this.worker = new Worker('/js/worker.js', {
+      this.worker = new Worker(new URL('./worker.js', import.meta.url), {
         type: 'module'
       });
 
