@@ -2088,6 +2088,7 @@ class GameManager {
 
   init() {
     // Initialize language model if available
+    
     if ('LanguageModel' in self) {
       Promise.resolve().then(async () => {
         try {
