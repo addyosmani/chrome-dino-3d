@@ -2159,14 +2159,6 @@ class GameManager {
 
       this.worker.onerror = (error) => {
         console.error('Worker error:', error);
-        console.error('Worker error details:', {
-          message: error.message || 'Unknown error',
-          filename: error.filename || 'Unknown file',
-          lineno: error.lineno || 'Unknown line',
-          colno: error.colno || 'Unknown column',
-          error: error.error || error,
-          workerPath: workerPath
-        });
 
         this.workerReady = false;
 
