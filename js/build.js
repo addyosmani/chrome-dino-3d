@@ -2168,15 +2168,8 @@ class GameManager {
           workerPath: workerPath
         });
 
-        // Try to determine if this is a WebGPU/browser support issue
-        this.checkWebGPUSupport().then((hasWebGPU) => {
-          console.log('WebGPU supported:', hasWebGPU);
-          if (!hasWebGPU) {
-            console.warn('WebGPU not supported, AI features will be unavailable');
-          }
-        });
-
         this.workerReady = false;
+
         const aiFeedbackText = document.getElementById('ai-feedback-text');
         if (aiFeedbackText) {
           aiFeedbackText.innerHTML = 'AI features are currently unavailable on this device';
