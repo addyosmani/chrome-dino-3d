@@ -6,3 +6,5 @@ offline-sprite-2x.png
 bot/
 debug.html
 js/config-debug.js
+# Build output
+dist/
