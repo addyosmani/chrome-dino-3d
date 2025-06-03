@@ -2148,12 +2148,42 @@ class GameManager {
 
     try {
       console.log('Initializing Transformers.js worker...');
-      this.worker = new Worker(new URL('./worker.js', import.meta.url), {
+
+      // Try different worker paths for different deployment scenarios
+      let workerPath;
+      try {
+        // First try relative path (works in most cases)
+        workerPath = new URL('./worker.js', import.meta.url);
+        console.log('Using relative worker path:', workerPath.href);
+      } catch (e) {
+        // Fallback to absolute path
+        workerPath = './js/worker.js';
+        console.log('Using absolute worker path:', workerPath);
+      }
+
+      this.worker = new Worker(workerPath, {
         type: 'module'
       });
 
       this.worker.onerror = (error) => {
         console.error('Worker error:', error);
+        console.error('Worker error details:', {
+          message: error.message || 'Unknown error',
+          filename: error.filename || 'Unknown file',
+          lineno: error.lineno || 'Unknown line',
+          colno: error.colno || 'Unknown column',
+          error: error.error || error,
+          workerPath: workerPath
+        });
+
+        // Try to determine if this is a WebGPU/browser support issue
+        this.checkWebGPUSupport().then((hasWebGPU) => {
+          console.log('WebGPU supported:', hasWebGPU);
+          if (!hasWebGPU) {
+            console.warn('WebGPU not supported, AI features will be unavailable');
+          }
+        });
+
         this.workerReady = false;
         const aiFeedbackText = document.getElementById('ai-feedback-text');
         if (aiFeedbackText) {
@@ -2467,6 +2497,18 @@ class GameManager {
       game.loop();
     });
     this.render();
+  }
+
+  async checkWebGPUSupport() {
+    try {
+      if (!navigator.gpu) {
+        return false;
+      }
+      const adapter = await navigator.gpu.requestAdapter();
+      return !!adapter;
+    } catch (e) {
+      return false;
+    }
   }
 }
 class InterfaceManager {
