@@ -2084,37 +2084,18 @@ class GameManager {
     this.languageModel = null;
     this.worker = null;
     this.workerReady = false;
+    // AI method tracking
+    this.aiMethod = 'server'; // Default to server-side
+    this.localModelReady = false;
   }
 
   init() {
-    // Initialize language model if available
+    // Start with server-side AI available immediately
+    console.log('AI initialized with Gemini API');
 
-    if ('LanguageModel' in self) {
-      Promise.resolve().then(async () => {
-        try {
-          // Check availability and capabilities
-          const { available, defaultTemperature, defaultTopK, maxTopK } = await LanguageModel.params();
+    // Initialize local models in the background
+    this.initLocalModels();
 
-          if (available !== "no") {
-            this.languageModel = await LanguageModel.create({
-              temperature: 0.2,
-              topK: defaultTopK,
-            });
-
-            console.log('Language model session created successfully');
-          } else {
-            console.warn('Chrome Language Model not available, using Transformers.js');
-            this.initTransformersWorker();
-          }
-        } catch (err) {
-          console.error('AI language model error:', err);
-          this.initTransformersWorker();
-        }
-      });
-    } else {
-      console.warn('Chrome Language Model not available, using Transformers.js');
-      this.initTransformersWorker();
-    }
     this.interface.init();
     visibly.visibilitychange(this.tabVisibilityChanged);
     window.onload = function () {
@@ -2140,6 +2121,39 @@ class GameManager {
     }
   }
 
+  async initLocalModels() {
+    // Try to initialize Chrome Prompt API first
+    if ('D' in self) {
+      try {
+        console.log('Attempting to initialize Chrome Prompt API...');
+        const { available, defaultTemperature, defaultTopK, maxTopK } = await LanguageModel.params();
+
+        if (available !== "no") {
+          this.languageModel = await LanguageModel.create({
+            temperature: 0.2,
+            topK: defaultTopK,
+          });
+
+          console.log('Chrome Prompt API initialized successfully');
+          this.switchToLocalModel('prompt-api');
+          return;
+        }
+      } catch (err) {
+        console.error('Chrome Prompt API initialization failed:', err);
+      }
+    }
+
+    // If Prompt API fails, try Transformers.js
+    console.log('Falling back to Transformers.js...');
+    this.initTransformersWorker();
+  }
+
+  switchToLocalModel(modelType) {
+    this.localModelReady = true;
+    this.aiMethod = modelType;
+    console.log(`Switched to local AI model: ${modelType}`);
+  }
+
   initTransformersWorker() {
     if (this.worker) {
       console.warn('Transformers.js worker already initialized.');
@@ -2149,7 +2163,6 @@ class GameManager {
     try {
       console.log('Initializing Transformers.js worker...');
 
-      // Use the direct path to the bundled worker
       const workerPath = './js/worker.js';
       console.log('Using worker path:', workerPath);
 
@@ -2159,70 +2172,122 @@ class GameManager {
 
       this.worker.onerror = (error) => {
         console.error('Worker error:', error);
-
         this.workerReady = false;
 
-        const aiFeedbackText = document.getElementById('ai-feedback-text');
-        if (aiFeedbackText) {
-          aiFeedbackText.innerHTML = 'AI features are currently unavailable on this device';
-          aiFeedbackText.style.color = '#ff6b6b';
-
-          setTimeout(() => {
-            const aiFeedback = document.getElementById('ai-feedback');
-            if (aiFeedback) {
-              aiFeedback.style.display = 'none';
-            }
-          }, 2000);
-        }
+        // Stay with server-side if worker fails
+        console.log('Staying with server-side AI due to worker error');
       };
 
       this.worker.onmessage = (e) => {
         const { status, output, data } = e.data;
 
-        const aiFeedbackText = document.getElementById('ai-feedback-text');
-
         switch (status) {
           case 'loading':
-            aiFeedbackText.innerHTML = data;
+            // Loading happens silently in background - don't show in UI
+            console.log('Transformers.js loading:', data);
             break;
 
           case 'ready':
-            console.log('Worker is ready');
+            console.log('Transformers.js worker is ready');
             this.workerReady = true;
-            aiFeedbackText.innerHTML = 'Ready';
+            this.switchToLocalModel('transformers');
             break;
 
           case 'start':
-            aiFeedbackText.innerHTML = '';
+            // Only clear if we're actually using transformers for generation
+            if (this.aiMethod === 'transformers') {
+              const aiFeedbackText = document.getElementById('ai-feedback-text');
+              aiFeedbackText.innerHTML = '';
+            }
             break;
 
           case 'update':
-            aiFeedbackText.innerHTML += output;
+            // Only update if we're actually using transformers for generation
+            if (this.aiMethod === 'transformers') {
+              const aiFeedbackText = document.getElementById('ai-feedback-text');
+              aiFeedbackText.innerHTML += output;
+            }
             break;
 
           case 'complete':
-            // Extract just the assistant's message
-            const match = output[0].match(/<\|im_start\|>assistant\s*(.*?)<\|im_end\|>/s);
-            aiFeedbackText.innerHTML = match ? match[1].trim() : output[0];
+            // Only show result if we're actually using transformers for generation
+            if (this.aiMethod === 'transformers') {
+              const aiFeedbackText = document.getElementById('ai-feedback-text');
+              const match = output[0].match(/<\|im_start\|>assistant\s*(.*?)<\|im_end\|>/s);
+              aiFeedbackText.innerHTML = match ? match[1].trim() : output[0];
+            }
             break;
 
           case 'error':
             console.error('Worker error:', data);
-            aiFeedbackText.innerHTML = 'Error generating summary. Please try again.';
+            // Only show error if we're actually using transformers for generation
+            if (this.aiMethod === 'transformers') {
+              const aiFeedbackText = document.getElementById('ai-feedback-text');
+              aiFeedbackText.innerHTML = 'Error generating summary. Please try again.';
+            }
             break;
         }
       };
 
-      // Start loading the model
       console.log('Sending load message to worker...');
       this.worker.postMessage({ type: 'load' });
     } catch (error) {
       console.error('Failed to initialize worker:', error);
       this.workerReady = false;
-      const aiFeedbackText = document.getElementById('ai-feedback-text');
-      if (aiFeedbackText) {
-        aiFeedbackText.innerHTML = 'Failed to initialize AI worker. This may be due to browser compatibility issues';
+      console.log('Staying with server-side AI due to worker initialization failure');
+    }
+  }
+
+  async generateGameSummaryGemini(gameData, systemPrompt, prompt) {
+    try {
+      // Get the API base URL (for Vercel, this will be your domain, for local dev it's localhost)
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+
+      console.log('Generating summary via Vercel API for score:', gameData.score);
+
+      const response = await fetch(`${apiBaseUrl}/api/generate-summary`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          systemPrompt,
+          prompt
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Server responded with status: ${response.status}`);
       }
+
+      // Handle streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let summary = '';
+
+      // Get the AI feedback text element
+      const aiFeedbackText = document.getElementById('ai-feedback-text');
+      aiFeedbackText.innerHTML = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        summary += chunk;
+
+        // Update UI with each chunk for streaming effect
+        aiFeedbackText.innerHTML = summary;
+      }
+
+      console.log('Vercel API result:', summary);
+      return summary;
+
+    } catch (error) {
+      console.error('Vercel API request failed:', error);
+      throw error;
     }
   }
 
@@ -2245,14 +2310,18 @@ class GameManager {
     2. Two general tips to improve jumping/ducking timing for better survival.
     Keep your response under 100 words total.`;
 
-    console.log(prompt);
+    console.log('Generating game summary using:', this.aiMethod);
+
+    const aiFeedbackText = document.getElementById('ai-feedback-text');
+
+    // Only show "Analyzing..." for local models, not for Gemini API (since streaming clears it)
+    if (this.aiMethod !== 'server') {
+      aiFeedbackText.innerHTML = 'Analyzing your performance...';
+    }
 
     try {
-      if (this.languageModel) {
+      if (this.aiMethod === 'prompt-api' && this.languageModel) {
         // Use Chrome Prompt API
-        const aiFeedbackText = document.getElementById('ai-feedback-text');
-        aiFeedbackText.innerHTML = 'Analyzing your performance...';
-
         if (!this.session) {
           this.session = await LanguageModel.create({
             initialPrompts: [{
@@ -2267,19 +2336,16 @@ class GameManager {
         const stream = this.session.promptStreaming(prompt);
         let result = '';
 
-        // Clear the initial message
         aiFeedbackText.innerHTML = '';
 
         for await (const chunk of stream) {
           result += chunk;
-          // Update UI with each chunk
           aiFeedbackText.innerHTML = result;
         }
 
-        console.log(result);
-        aiFeedbackText.innerHTML = result;
+        console.log('Chrome Prompt API result:', result);
 
-      } else if (this.worker && this.workerReady) {
+      } else if (this.aiMethod === 'transformers' && this.worker && this.workerReady) {
         // Use Transformers.js
         const messages = [
           { role: 'system', content: systemPrompt },
@@ -2290,15 +2356,32 @@ class GameManager {
           type: 'generate',
           data: messages
         });
+
       } else {
-        throw new Error('No AI model available');
+        // Use Vercel API (streaming handled internally)
+        const summary = await this.generateGameSummaryGemini(gameData, systemPrompt, prompt);
+        console.log('Vercel API result:', summary);
       }
+
     } catch (error) {
       console.error('Error generating game summary:', error);
-      const aiFeedbackText = document.getElementById('ai-feedback-text');
-      aiFeedbackText.innerHTML = 'Sorry, there was an error generating your summary. Please try again.';
+
+      // If local model fails, try server-side as fallback
+      if (this.aiMethod !== 'server') {
+        console.log('Local model failed, falling back to Vercel API...');
+        try {
+          const summary = await this.generateGameSummaryGemini(gameData, systemPrompt, prompt);
+          aiFeedbackText.innerHTML = summary;
+        } catch (serverError) {
+          console.error('Vercel API fallback also failed:', serverError);
+          aiFeedbackText.innerHTML = 'Sorry, there was an error generating your summary. Please try again.';
+        }
+      } else {
+        aiFeedbackText.innerHTML = 'Sorry, there was an error generating your summary. Please try again.';
+      }
     }
   }
+
   setStarter(timeout = 600) {
     if (!this.starter) {
       this.starter = input.addKeyCallback("space", "justPressed", function () {
