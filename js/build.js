@@ -2072,6 +2072,294 @@ class EffectsManager {
   }
 }
 let effects = new EffectsManager();
+
+class TranslationManager {
+  constructor() {
+    this.currentLanguage = 'en';
+    this.translators = new Map();
+    this.isSupported = 'Translator' in self;
+    this.isInitialized = false;
+    this.maxTranslators = 3;
+
+    // Store original AI feedback text for translation
+    this.originalAIFeedback = '';
+
+    // Translatable text mapping
+    this.translatableElements = {
+      'ai-game-summary': 'AI Game Summary',
+      'no-internet-title': 'No Internet Connection',
+      'try-following': 'Try the following:',
+      'check-network': 'Check your network cables, modem, and router.',
+      'reconnect-wifi': 'Reconnect to your Wi-Fi network.',
+      'start-game': 'Start Game',
+      'game-over': 'GAME OVER',
+      'analyzing-performance': 'Analyzing your performance...',
+      'error-generating': 'Sorry, there was an error generating your summary. Please try again.',
+      'language-label': 'Language:'
+    };
+  }
+
+  async init() {
+    if (!this.isSupported) {
+      console.warn('Translator API not supported in this browser');
+      return false;
+    }
+
+    try {
+      this.isInitialized = true;
+      console.log('Translation Manager initialized');
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize Translation Manager:', error);
+      return false;
+    }
+  }
+
+  setupLanguageSelector() {
+    const languageSelect = document.getElementById('language-select');
+    const languageSelector = document.getElementById('language-selector');
+    const translationStatus = document.getElementById('translation-status');
+
+    if (!languageSelect) return;
+
+    // Hide the entire language selector if translation is not supported
+    if (!this.isSupported) {
+      if (languageSelector) {
+        languageSelector.style.display = 'none';
+      }
+      return;
+    }
+
+    languageSelect.addEventListener('change', async (event) => {
+      const newLanguage = event.target.value;
+      await this.changeLanguage(newLanguage, translationStatus);
+    });
+  }
+
+  async changeLanguage(targetLanguage, statusElement = null) {
+    if (targetLanguage === this.currentLanguage) return;
+
+    // Check if Translator API is available
+    if (!this.isSupported) {
+      console.warn('Translator API not supported in this browser');
+      if (statusElement) {
+        statusElement.textContent = 'Translation not supported in this browser';
+        statusElement.style.display = 'block';
+        setTimeout(() => {
+          statusElement.style.display = 'none';
+        }, 3000);
+      }
+      return;
+    }
+
+    if (statusElement) {
+      statusElement.textContent = 'Loading translator...';
+      statusElement.style.display = 'block';
+    }
+
+    try {
+      // Check if this language pair is supported
+      const availability = await Translator.availability({
+        sourceLanguage: 'en',
+        targetLanguage: targetLanguage
+      });
+
+      console.log(`Translator availability for en->${targetLanguage}: ${availability}`);
+
+      if (availability === 'no') {
+        if (statusElement) {
+          statusElement.textContent = `Translation to ${this.getLanguageName(targetLanguage)} is not supported`;
+          setTimeout(() => {
+            statusElement.style.display = 'none';
+          }, 3000);
+        }
+        console.warn(`Translation to ${targetLanguage} is not supported`);
+        // Reset to English
+        const languageSelect = document.getElementById('language-select');
+        if (languageSelect) {
+          languageSelect.value = 'en';
+        }
+        this.currentLanguage = 'en';
+        this.resetUIToEnglish();
+        return;
+      }
+
+      if (availability !== 'readily-available') {
+        if (statusElement) {
+          statusElement.textContent = `Downloading language model (${targetLanguage})...`;
+        }
+      }
+
+
+      this.currentLanguage = targetLanguage;
+
+      // Translate all UI elements
+      await this.translateUI();
+
+      if (statusElement) {
+        statusElement.textContent = '';
+        statusElement.style.display = 'none';
+      }
+
+      console.log(`Language changed to: ${targetLanguage}`);
+
+    } catch (error) {
+      console.error('Error changing language:', error);
+      if (statusElement) {
+        statusElement.textContent = `Translation to ${targetLanguage} not available`;
+        setTimeout(() => {
+          statusElement.style.display = 'none';
+        }, 3000);
+      }
+    }
+  }
+
+  async translateText(text, targetLanguage = null) {
+    if (!this.isSupported || !text) return text;
+
+    const language = targetLanguage || this.currentLanguage;
+    if (language === 'en') return text;
+
+    try {
+      // Check if Translator API is actually available (not just 'Translator' in self)
+      if (typeof Translator === 'undefined') {
+        console.warn('Translator API not available');
+        return text;
+      }
+
+      // Never create a translator where source equals target
+      if (language === 'en') {
+        return text;
+      }
+
+      if (!this.translators.has(language)) {
+        const translator = await Translator.create({
+          sourceLanguage: 'en',
+          targetLanguage: language
+        });
+        this.translators.set(language, translator);
+      }
+
+      const translator = this.translators.get(language);
+      return await translator.translate(text);
+    } catch (error) {
+      console.error('Translation error:', error);
+      return text;
+    }
+  }
+
+  setOriginalAIFeedback(text) {
+    this.originalAIFeedback = text;
+  }
+
+  async translateUI() {
+    if (this.currentLanguage === 'en') {
+      // Reset to original English text
+      this.resetUIToEnglish();
+      return;
+    }
+
+    // Translate all marked elements
+    for (const [elementId, originalText] of Object.entries(this.translatableElements)) {
+      const element = document.querySelector(`[data-translate="${elementId}"]`) ||
+        document.getElementById(elementId);
+
+      if (element) {
+        try {
+          const translatedText = await this.translateText(originalText);
+          element.textContent = translatedText;
+        } catch (error) {
+          console.error(`Error translating ${elementId}:`, error);
+        }
+      }
+    }
+
+    // Translate AI feedback content if it exists
+    await this.translateAIFeedback();
+  }
+
+  async translateAIFeedback() {
+    const aiFeedbackElement = document.getElementById('ai-feedback-text');
+
+    if (aiFeedbackElement && this.originalAIFeedback) {
+      try {
+        if (this.currentLanguage === 'en') {
+          // Reset to original English text
+          aiFeedbackElement.innerHTML = this.originalAIFeedback;
+        } else {
+          // Translate the original text to current language
+          const translatedFeedback = await this.translateText(this.originalAIFeedback);
+          aiFeedbackElement.innerHTML = translatedFeedback;
+        }
+      } catch (error) {
+        console.error('Error translating AI feedback:', error);
+        // Fall back to original text if translation fails
+        aiFeedbackElement.innerHTML = this.originalAIFeedback;
+      }
+    }
+  }
+
+  resetUIToEnglish() {
+    // Reset all UI elements to original English text
+    for (const [elementId, originalText] of Object.entries(this.translatableElements)) {
+      const element = document.querySelector(`[data-translate="${elementId}"]`) ||
+        document.getElementById(elementId);
+
+      if (element) {
+        element.textContent = originalText;
+      }
+    }
+
+    // Reset AI feedback to original English text
+    this.translateAIFeedback();
+  }
+
+  async translateGamePrompt(systemPrompt, userPrompt) {
+    if (this.currentLanguage === 'en' || !this.isSupported) {
+      return { systemPrompt, userPrompt };
+    }
+
+    try {
+      const translatedSystemPrompt = await this.translateText(systemPrompt);
+      const translatedUserPrompt = await this.translateText(userPrompt);
+
+      return {
+        systemPrompt: translatedSystemPrompt,
+        userPrompt: translatedUserPrompt
+      };
+    } catch (error) {
+      console.error('Error translating prompts:', error);
+      return { systemPrompt, userPrompt }; // Return original if translation fails
+    }
+  }
+
+  async translateResponse(responseText) {
+    if (this.currentLanguage === 'en' || !responseText || !this.isSupported) {
+      return responseText;
+    }
+
+    try {
+      // For responses, we need to translate FROM English TO current language
+      return await this.translateText(responseText);
+    } catch (error) {
+      console.error('Error translating response:', error);
+      return responseText;
+    }
+  }
+
+  getLanguageName(code) {
+    const languages = {
+      'en': 'English',
+      'es': 'Español',
+      'ru': 'Русский',
+      'ja': '日本語',
+      'zh': '中文',
+      'hi': 'हिन्दी'
+    };
+    return languages[code] || code;
+  }
+}
+
 class GameManager {
   constructor(interface_manager) {
     this.isPlaying = false;
@@ -2087,9 +2375,14 @@ class GameManager {
     // AI method tracking
     this.aiMethod = 'server'; // Default to server-side
     this.localModelReady = false;
+    // Translation manager
+    this.translator = new TranslationManager();
   }
 
   init() {
+    // Initialize translation manager
+    this.translator.init();
+
     // Start with server-side AI available immediately
     console.log('AI initialized with Gemini API');
 
@@ -2099,6 +2392,9 @@ class GameManager {
     this.interface.init();
     visibly.visibilitychange(this.tabVisibilityChanged);
     window.onload = function () {
+      // Setup language selector after DOM is loaded
+      game.translator.setupLanguageSelector();
+
       load_manager.load_all(function () {
         game.interface.other.preloader.classList.add("hidden");
         if (config.debug) {
@@ -2123,7 +2419,7 @@ class GameManager {
 
   async initLocalModels() {
     // Try to initialize Chrome Prompt API first
-    if ('LanguageModel' in self) {
+    if ('D' in self) {
       try {
         console.log('Attempting to initialize Chrome Prompt API...');
         const { available, defaultTemperature, defaultTopK, maxTopK } = await LanguageModel.params();
@@ -2183,7 +2479,6 @@ class GameManager {
 
         switch (status) {
           case 'loading':
-            // Loading happens silently in background - don't show in UI
             console.log('Transformers.js loading:', data);
             break;
 
@@ -2214,7 +2509,11 @@ class GameManager {
             if (this.aiMethod === 'transformers') {
               const aiFeedbackText = document.getElementById('ai-feedback-text');
               const match = output[0].match(/<\|im_start\|>assistant\s*(.*?)<\|im_end\|>/s);
-              aiFeedbackText.innerHTML = match ? match[1].trim() : output[0];
+              const finalResult = match ? match[1].trim() : output[0];
+              aiFeedbackText.innerHTML = finalResult;
+
+              // Store the original English text for translation
+              this.translator.setOriginalAIFeedback(finalResult);
             }
             break;
 
@@ -2240,7 +2539,6 @@ class GameManager {
 
   async generateGameSummaryGemini(gameData, systemPrompt, prompt) {
     try {
-      // Get the API base URL (for Vercel, this will be your domain, for local dev it's localhost)
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
 
       console.log('Generating summary via Vercel API for score:', gameData.score);
@@ -2261,12 +2559,10 @@ class GameManager {
         throw new Error(errorData.message || `Server responded with status: ${response.status}`);
       }
 
-      // Handle streaming response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let summary = '';
 
-      // Get the AI feedback text element
       const aiFeedbackText = document.getElementById('ai-feedback-text');
       aiFeedbackText.innerHTML = '';
 
@@ -2281,6 +2577,9 @@ class GameManager {
         // Update UI with each chunk for streaming effect
         aiFeedbackText.innerHTML = summary;
       }
+
+      // Store the original English text for translation
+      this.translator.setOriginalAIFeedback(summary);
 
       console.log('Vercel API result:', summary);
       return summary;
@@ -2314,42 +2613,52 @@ class GameManager {
 
     const aiFeedbackText = document.getElementById('ai-feedback-text');
 
+    const analyzingMessage = await this.translator.translateText('Analyzing your performance...');
+
     // Only show "Analyzing..." for local models, not for Gemini API (since streaming clears it)
     if (this.aiMethod !== 'server') {
-      aiFeedbackText.innerHTML = 'Analyzing your performance...';
+      aiFeedbackText.innerHTML = analyzingMessage;
     }
 
     try {
+      // Translate prompts if needed (for non-English languages)
+      const { systemPrompt: translatedSystemPrompt, userPrompt: translatedPrompt } =
+        await this.translator.translateGamePrompt(systemPrompt, prompt);
+
       if (this.aiMethod === 'prompt-api' && this.languageModel) {
         // Use Chrome Prompt API
         if (!this.session) {
           this.session = await LanguageModel.create({
             initialPrompts: [{
               role: 'system',
-              content: systemPrompt
+              content: translatedSystemPrompt
             }],
             temperature: 0.4,
             topK: (await LanguageModel.params()).defaultTopK
           });
         }
 
-        const stream = this.session.promptStreaming(prompt);
+        const stream = this.session.promptStreaming(translatedPrompt);
         let result = '';
 
         aiFeedbackText.innerHTML = '';
 
         for await (const chunk of stream) {
           result += chunk;
-          aiFeedbackText.innerHTML = result;
+          const translatedChunk = await this.translator.translateResponse(chunk);
+          aiFeedbackText.innerHTML += translatedChunk;
         }
+
+        // Store the original English text for translation
+        this.translator.setOriginalAIFeedback(result);
 
         console.log('Chrome Prompt API result:', result);
 
       } else if (this.aiMethod === 'transformers' && this.worker && this.workerReady) {
         // Use Transformers.js
         const messages = [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
+          { role: 'system', content: translatedSystemPrompt },
+          { role: 'user', content: translatedPrompt }
         ];
 
         this.worker.postMessage({
@@ -2359,7 +2668,7 @@ class GameManager {
 
       } else {
         // Use Vercel API (streaming handled internally)
-        const summary = await this.generateGameSummaryGemini(gameData, systemPrompt, prompt);
+        const summary = await this.generateGameSummaryGemini(gameData, translatedSystemPrompt, translatedPrompt);
         console.log('Vercel API result:', summary);
       }
 
@@ -2372,12 +2681,17 @@ class GameManager {
         try {
           const summary = await this.generateGameSummaryGemini(gameData, systemPrompt, prompt);
           aiFeedbackText.innerHTML = summary;
+          this.translator.setOriginalAIFeedback(summary);
         } catch (serverError) {
           console.error('Vercel API fallback also failed:', serverError);
-          aiFeedbackText.innerHTML = 'Sorry, there was an error generating your summary. Please try again.';
+          const errorMessage = 'Sorry, there was an error generating your summary. Please try again.';
+          aiFeedbackText.innerHTML = errorMessage;
+          this.translator.setOriginalAIFeedback(errorMessage);
         }
       } else {
-        aiFeedbackText.innerHTML = 'Sorry, there was an error generating your summary. Please try again.';
+        const errorMessage = 'Sorry, there was an error generating your summary. Please try again.';
+        aiFeedbackText.innerHTML = errorMessage;
+        this.translator.setOriginalAIFeedback(errorMessage);
       }
     }
   }

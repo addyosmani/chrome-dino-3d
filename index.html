@@ -22,36 +22,36 @@
 
 	<div id="preloader">
 		<div class="progress">
-	        <div class="chart">
-	            <div id="game-load-progress" class="bar lime bar-0">
-	                <div class="face top">
-	                    <div class="growing-bar"></div>
-	                </div>
-	                <div class="face side-0">
-	                    <div class="growing-bar"></div>
-	                </div>
-	                <div class="face floor">
-	                    <div class="growing-bar"></div>
-	                </div>
-	                <div class="face side-a"></div>
-	                <div class="face side-b"></div>
-	                <div class="face side-1">
-	                    <div class="growing-bar"></div>
-	                </div>
-	            </div>
-	        </div>
+			<div class="chart">
+				<div id="game-load-progress" class="bar lime bar-0">
+					<div class="face top">
+						<div class="growing-bar"></div>
+					</div>
+					<div class="face side-0">
+						<div class="growing-bar"></div>
+					</div>
+					<div class="face floor">
+						<div class="growing-bar"></div>
+					</div>
+					<div class="face side-a"></div>
+					<div class="face side-b"></div>
+					<div class="face side-1">
+						<div class="growing-bar"></div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 
 	<div id="chrome-no-internet">
 		<div class="poster"></div>
-		<h1>No Internet Connection</h1>
+		<h1 data-translate="no-internet-title">No Internet Connection</h1>
 		<div class="info">
-			<p>Try the following:</p>
+			<p data-translate="try-following">Try the following:</p>
 			<ul>
-				<li>Check your network cables, modem, and router.</li>
-				<li>Reconnect to your Wi-Fi network.</li>
-				<li id="game-start" class="hidden">&laquo;Start Game&raquo;</li>
+				<li data-translate="check-network">Check your network cables, modem, and router.</li>
+				<li data-translate="reconnect-wifi">Reconnect to your Wi-Fi network.</li>
+				<li id="game-start" class="hidden" data-translate="start-game">&laquo;Start Game&raquo;</li>
 			</ul>
 			<small>ERR_LOADING_ASSETS</small>
 			<small id="game-load-progress">0%</small>
@@ -59,14 +59,29 @@
 	</div>
 
 	<div id="game-restart" class="hidden">
-		<h1>GAME OVER</h1>
+		<h1 data-translate="game-over">GAME OVER</h1>
 		<img src="media/repeat.png">
 	</div>
 
+	<div id="language-selector">
+		<div>
+			<label for="language-select" data-translate="language-label">Language:</label>
+			<select id="language-select">
+				<option value="en">English</option>
+				<option value="es">Español</option>
+				<option value="ru">Русский</option>
+				<option value="ja">日本語</option>
+				<option value="zh">中文</option>
+				<option value="hi">हिन्दी</option>
+			</select>
+		</div>
+		<div id="translation-status"></div>
+	</div>
+
 	<div id="ai-feedback">
-		<h1>AI Game Summary</h1>
+		<h1 data-translate="ai-game-summary">AI Game Summary</h1>
 		<div id="ai-feedback-wrapper">
-			<p id="ai-feedback-text"></p>
+			<p id="ai-feedback-text" data-translate="ai-feedback-content"></p>
 		</div>
 	</div>
 
