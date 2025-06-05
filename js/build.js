@@ -2181,6 +2181,10 @@ class TranslationManager {
         }
         this.currentLanguage = 'en';
         this.resetUIToEnglish();
+        // Reset Chrome Prompt API session when changing language
+        if (window.game && window.game.session) {
+          window.game.session = null;
+        }
         return;
       }
 
@@ -2192,6 +2196,11 @@ class TranslationManager {
 
 
       this.currentLanguage = targetLanguage;
+
+      // Reset Chrome Prompt API session when changing language
+      if (window.game && window.game.session) {
+        window.game.session = null;
+      }
 
       // Translate all UI elements
       await this.translateUI();
@@ -2626,17 +2635,15 @@ class GameManager {
         await this.translator.translateGamePrompt(systemPrompt, prompt);
 
       if (this.aiMethod === 'prompt-api' && this.languageModel) {
-        // Use Chrome Prompt API
-        if (!this.session) {
-          this.session = await LanguageModel.create({
-            initialPrompts: [{
-              role: 'system',
-              content: translatedSystemPrompt
-            }],
-            temperature: 0.4,
-            topK: (await LanguageModel.params()).defaultTopK
-          });
-        }
+        // Use Chrome Prompt API - always create a fresh session to ensure correct language
+        this.session = await LanguageModel.create({
+          initialPrompts: [{
+            role: 'system',
+            content: translatedSystemPrompt
+          }],
+          temperature: 0.4,
+          topK: (await LanguageModel.params()).defaultTopK
+        });
 
         const stream = this.session.promptStreaming(translatedPrompt);
         let result = '';
