@@ -2419,7 +2419,7 @@ class GameManager {
 
   async initLocalModels() {
     // Try to initialize Chrome Prompt API first
-    if ('D' in self) {
+    if ('LanguageModel' in self) {
       try {
         console.log('Attempting to initialize Chrome Prompt API...');
         const { available, defaultTemperature, defaultTopK, maxTopK } = await LanguageModel.params();
