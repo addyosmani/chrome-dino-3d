@@ -941,7 +941,7 @@ END // CHART'S RULES
 
 #ai-feedback h1 {
   margin: 0 0 10px 0;
-  font-size: 13px;
+  font-size: 0.875rem;
   color: #5d7b88;
   font-family: 'Press Start 2P', cursive;
 }
@@ -958,7 +958,7 @@ END // CHART'S RULES
 #ai-feedback p {
   max-width: 450px;
   margin: 0;
-  font-size: 13px;
+  font-size: 0.875rem;
   line-height: 1.4;
   text-align: left;
   text-wrap: wrap;
@@ -967,32 +967,18 @@ END // CHART'S RULES
   white-space: pre-wrap;
 }
 
-/* Responsive styles for AI feedback content */
-@media (max-width: 992px) {
-  #ai-feedback {
-    max-width: 350px;
-    width: 350px;
-    max-height: 500px;
-    padding: 15px;
-  }
-
-  #ai-feedback-wrapper {
-    max-width: 350px;
-    width: 350px;
-    max-height: 500px;
-  }
-
-  #ai-feedback p {
-    max-width: 350px;
-  }
+#ai-feedback #llm-type {
+  padding-top: 10px;
+  color: #686868;
+  font-size: 0.75rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   #ai-feedback {
     max-width: 85vw;
     width: 85vw;
-    max-height: 60vh;
-    padding: 12px;
+    max-height: 30vh;
+    padding: 10px;
     left: 50%;
     right: auto;
     transform: translateX(-50%);
@@ -1000,27 +986,36 @@ END // CHART'S RULES
   }
 
   #ai-feedback-wrapper {
-    max-width: 100%;
-    width: 100%;
-    max-height: 50vh;
+    max-height: 20vh;
+    overflow-y: scroll;
   }
 
   #ai-feedback p {
-    max-width: 100%;
-  }
-
-}
-
-@media (max-width: 480px) {
-  #ai-feedback {
     max-width: 85vw;
-    width: 85vw;
-    max-height: 50vh;
-    padding: 10px;
   }
 
-  #ai-feedback-wrapper {
-    max-height: 40vh;
+  #game-restart {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
+  #game-restart>h1 {
+    font-size: 28px;
+    margin-bottom: 40px;
+  }
+
+  #game-restart>img {
+    width: 82px;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -o-pixelated;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+  }
+
+  #game-restart.hidden {
+    display: none;
   }
 }
 

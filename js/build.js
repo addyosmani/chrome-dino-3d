@@ -55,35 +55,56 @@ class InputManager {
     addKey(38, "space");
     addKey(32, "space");
     addKey(81, "debug_speedup");
-    // Event listeners for keyboard supportAdd commentMore actions
+    // Event listeners for keyboard support
     window.addEventListener('keydown', (e) => setKeyFromKeyCode(e.keyCode, true));
     window.addEventListener('keyup', (e) => setKeyFromKeyCode(e.keyCode, false));
 
-    // Mobile touch support
-    let touchStartTime = 0;
-    let isDucking = false;
+    // Mobile touch support variables
+    this.touchStartTime = 0;
+    this.isDucking = false;
+    this.touchStartHandler = null;
+    this.touchEndHandler = null;
 
-    window.addEventListener('touchstart', (e) => {
+    // Create touch event handlers
+    this.touchStartHandler = (e) => {
       e.preventDefault();
       if (e.touches.length === 1) {
-        touchStartTime = Date.now();
+        this.touchStartTime = Date.now();
         setKeyFromKeyCode(32, true); // Simulate spacebar (jump)
       } else if (e.touches.length === 2) {
-        isDucking = true;
+        this.isDucking = true;
         setKeyFromKeyCode(40, true); // Simulate down arrow (duck)
       }
-    });
+    };
 
-    window.addEventListener('touchend', (e) => {
+    this.touchEndHandler = (e) => {
       e.preventDefault();
-      if (isDucking) {
+      if (this.isDucking) {
         setKeyFromKeyCode(40, false); // Release ducking
-        isDucking = false;
+        this.isDucking = false;
       } else {
         setKeyFromKeyCode(32, false); // Release jump
       }
-    });
+    };
   }
+
+  enableTouchControls() {
+    if (this.touchStartHandler && this.touchEndHandler) {
+      window.addEventListener('touchstart', this.touchStartHandler);
+      window.addEventListener('touchend', this.touchEndHandler);
+    }
+  }
+
+  disableTouchControls() {
+    if (this.touchStartHandler && this.touchEndHandler) {
+      window.removeEventListener('touchstart', this.touchStartHandler);
+      window.removeEventListener('touchend', this.touchEndHandler);
+      // Reset touch state
+      this.isDucking = false;
+      this.touchStartTime = 0;
+    }
+  }
+
   update() {
     for (const keyState of Object.values(this.keys)) {
       if (keyState.justPressed) {
@@ -2352,6 +2373,7 @@ class GameManager {
 
     // Start with server-side AI available immediately
     console.log('AI initialized with Gemini API');
+    this.updateLLMTypeDisplay();
 
     // Initialize local models in the background
     this.initLocalModels();
@@ -2414,7 +2436,30 @@ class GameManager {
   switchToLocalModel(modelType) {
     this.localModelReady = true;
     this.aiMethod = modelType;
+    this.updateLLMTypeDisplay();
     console.log(`Switched to local AI model: ${modelType}`);
+  }
+
+  updateLLMTypeDisplay() {
+    const llmTypeElement = document.getElementById('llm-type');
+    if (!llmTypeElement) return;
+
+    let displayText = '';
+    switch (this.aiMethod) {
+      case 'server':
+        displayText = 'Using Gemini server model';
+        break;
+      case 'prompt-api':
+        displayText = 'Using Built-in Gemini Nano model';
+        break;
+      case 'transformers':
+        displayText = 'Using Transformers.js (SmolLM2-1.7B) model';
+        break;
+      default:
+        displayText = 'Using Gemini server model';
+    }
+
+    llmTypeElement.textContent = displayText;
   }
 
   initTransformersWorker() {
@@ -2573,6 +2618,7 @@ class GameManager {
     console.log('Generating game summary using:', this.aiMethod);
 
     const aiFeedbackText = document.getElementById('ai-feedback-text');
+    this.updateLLMTypeDisplay();
 
     const analyzingMessage = await this.translator.translateText('Analyzing your performance...');
 
@@ -2719,6 +2765,8 @@ class GameManager {
     enemy.init();
     audio.play("bg");
     this.cancelStarter();
+    // Enable touch controls when game starts
+    input.enableTouchControls();
     clock.getDelta();
     this.render();
     this.loop();
@@ -2731,6 +2779,8 @@ class GameManager {
       return false;
     }
     this.isPlaying = false;
+    // Disable touch controls when game stops
+    input.disableTouchControls();
     dynoDustEmitter.removeAllParticles();
     dynoDustEmitter.stopEmit();
     dynoDustEmitter.dead = true;
@@ -2749,6 +2799,8 @@ class GameManager {
     }
     this.isPaused = true;
     this.isPlaying = false;
+    // Disable touch controls when paused
+    input.disableTouchControls();
     audio.pause("bg");
   }
   resume() {
@@ -2757,6 +2809,8 @@ class GameManager {
     }
     this.isPlaying = true;
     this.isPaused = false;
+    // Re-enable touch controls when resuming
+    input.enableTouchControls();
     audio.resume("bg");
     clock.getDelta();
     this.render();
