@@ -2076,10 +2076,8 @@ let effects = new EffectsManager();
 class TranslationManager {
   constructor() {
     this.currentLanguage = 'en';
-    this.translators = new Map();
     this.isSupported = 'Translator' in self;
     this.isInitialized = false;
-    this.maxTranslators = 3;
 
     // Store original AI feedback text for translation
     this.originalAIFeedback = '';
@@ -2171,7 +2169,7 @@ class TranslationManager {
           statusElement.textContent = `Translation to ${this.getLanguageName(targetLanguage)} is not supported`;
           setTimeout(() => {
             statusElement.style.display = 'none';
-          }, 3000);
+          }, 2000);
         }
         console.warn(`Translation to ${targetLanguage} is not supported`);
         // Reset to English
@@ -2181,10 +2179,6 @@ class TranslationManager {
         }
         this.currentLanguage = 'en';
         this.resetUIToEnglish();
-        // Reset Chrome Prompt API session when changing language
-        if (window.game && window.game.session) {
-          window.game.session = null;
-        }
         return;
       }
 
@@ -2196,11 +2190,6 @@ class TranslationManager {
 
 
       this.currentLanguage = targetLanguage;
-
-      // Reset Chrome Prompt API session when changing language
-      if (window.game && window.game.session) {
-        window.game.session = null;
-      }
 
       // Translate all UI elements
       await this.translateUI();
@@ -2218,7 +2207,7 @@ class TranslationManager {
         statusElement.textContent = `Translation to ${targetLanguage} not available`;
         setTimeout(() => {
           statusElement.style.display = 'none';
-        }, 3000);
+        }, 2000);
       }
     }
   }
@@ -2241,15 +2230,11 @@ class TranslationManager {
         return text;
       }
 
-      if (!this.translators.has(language)) {
-        const translator = await Translator.create({
-          sourceLanguage: 'en',
-          targetLanguage: language
-        });
-        this.translators.set(language, translator);
-      }
+      const translator = await Translator.create({
+        sourceLanguage: 'en',
+        targetLanguage: language
+      });
 
-      const translator = this.translators.get(language);
       return await translator.translate(text);
     } catch (error) {
       console.error('Translation error:', error);
@@ -2282,30 +2267,6 @@ class TranslationManager {
         }
       }
     }
-
-    // Translate AI feedback content if it exists
-    await this.translateAIFeedback();
-  }
-
-  async translateAIFeedback() {
-    const aiFeedbackElement = document.getElementById('ai-feedback-text');
-
-    if (aiFeedbackElement && this.originalAIFeedback) {
-      try {
-        if (this.currentLanguage === 'en') {
-          // Reset to original English text
-          aiFeedbackElement.innerHTML = this.originalAIFeedback;
-        } else {
-          // Translate the original text to current language
-          const translatedFeedback = await this.translateText(this.originalAIFeedback);
-          aiFeedbackElement.innerHTML = translatedFeedback;
-        }
-      } catch (error) {
-        console.error('Error translating AI feedback:', error);
-        // Fall back to original text if translation fails
-        aiFeedbackElement.innerHTML = this.originalAIFeedback;
-      }
-    }
   }
 
   resetUIToEnglish() {
@@ -2318,9 +2279,6 @@ class TranslationManager {
         element.textContent = originalText;
       }
     }
-
-    // Reset AI feedback to original English text
-    this.translateAIFeedback();
   }
 
   async translateGamePrompt(systemPrompt, userPrompt) {
@@ -2382,9 +2340,9 @@ class GameManager {
     this.worker = null;
     this.workerReady = false;
     // AI method tracking
-    this.aiMethod = 'server'; // Default to server-side
+    this.aiMethod = 'server';
     this.localModelReady = false;
-    // Translation manager
+
     this.translator = new TranslationManager();
   }
 
@@ -2520,9 +2478,6 @@ class GameManager {
               const match = output[0].match(/<\|im_start\|>assistant\s*(.*?)<\|im_end\|>/s);
               const finalResult = match ? match[1].trim() : output[0];
               aiFeedbackText.innerHTML = finalResult;
-
-              // Store the original English text for translation
-              this.translator.setOriginalAIFeedback(finalResult);
             }
             break;
 
@@ -2586,9 +2541,6 @@ class GameManager {
         // Update UI with each chunk for streaming effect
         aiFeedbackText.innerHTML = summary;
       }
-
-      // Store the original English text for translation
-      this.translator.setOriginalAIFeedback(summary);
 
       console.log('Vercel API result:', summary);
       return summary;
@@ -2656,9 +2608,6 @@ class GameManager {
           aiFeedbackText.innerHTML += translatedChunk;
         }
 
-        // Store the original English text for translation
-        this.translator.setOriginalAIFeedback(result);
-
         console.log('Chrome Prompt API result:', result);
 
       } else if (this.aiMethod === 'transformers' && this.worker && this.workerReady) {
@@ -2688,17 +2637,14 @@ class GameManager {
         try {
           const summary = await this.generateGameSummaryGemini(gameData, systemPrompt, prompt);
           aiFeedbackText.innerHTML = summary;
-          this.translator.setOriginalAIFeedback(summary);
         } catch (serverError) {
           console.error('Vercel API fallback also failed:', serverError);
           const errorMessage = 'Sorry, there was an error generating your summary. Please try again.';
           aiFeedbackText.innerHTML = errorMessage;
-          this.translator.setOriginalAIFeedback(errorMessage);
         }
       } else {
         const errorMessage = 'Sorry, there was an error generating your summary. Please try again.';
         aiFeedbackText.innerHTML = errorMessage;
-        this.translator.setOriginalAIFeedback(errorMessage);
       }
     }
   }
@@ -2913,6 +2859,13 @@ class InterfaceManager {
   btnStartClick(e) {
     game.interface.buttons.start.display = "none";
     document.body.classList.add("game-started");
+
+    // Hide language selector when game starts
+    const languageSelector = document.getElementById("language-selector");
+    if (languageSelector) {
+      languageSelector.style.display = "none";
+    }
+
     game.start();
   }
   btnRestartClick(e) {
