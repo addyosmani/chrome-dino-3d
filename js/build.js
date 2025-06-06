@@ -540,6 +540,8 @@ class ScoreManager {
     this.lvl = 0;
     this.clock = new THREE.Clock();
     this.last_flash_score = 0;
+    this.recent_scores = [];
+    this.max_recent_scores = 3;
     Number.prototype.pad = function (size) {
       var s = String(this);
       while (s.length < (size || 2)) {
@@ -559,6 +561,7 @@ class ScoreManager {
       localStorage.setItem("highest_score", 0);
       localStorage.setItem("highest_score___GLITCH_FIX", true);
     }
+    this.loadRecentScores();
   }
   set(points) {
     this.score = points;
@@ -609,6 +612,75 @@ class ScoreManager {
     this.clock = new THREE.Clock();
     this.lvl = 0;
     this.add_vel = 10;
+  }
+
+  loadRecentScores() {
+    const stored = localStorage.getItem("recent_scores");
+    if (stored) {
+      try {
+        this.recent_scores = JSON.parse(stored);
+        // Ensure we don't exceed max length
+        if (this.recent_scores.length > this.max_recent_scores) {
+          this.recent_scores = this.recent_scores.slice(-this.max_recent_scores);
+          this.saveRecentScores();
+        }
+        // Update display after loading
+        this.updateRecentScoresDisplay();
+      } catch (e) {
+        this.recent_scores = [];
+      }
+    }
+  }
+
+  saveRecentScores() {
+    localStorage.setItem("recent_scores", JSON.stringify(this.recent_scores));
+  }
+
+  addRecentScore(finalScore, timePlayed) {
+    const scoreEntry = {
+      score: Math.floor(finalScore),
+      time: Math.floor(timePlayed),
+      date: Date.now()
+    };
+
+    this.recent_scores.push(scoreEntry);
+
+    // Keep only the most recent scores
+    if (this.recent_scores.length > this.max_recent_scores) {
+      this.recent_scores = this.recent_scores.slice(-this.max_recent_scores);
+    }
+
+    this.saveRecentScores();
+    this.updateRecentScoresDisplay();
+  }
+
+  updateRecentScoresDisplay() {
+    const container = document.getElementById('recent-scores-list');
+    if (!container) return;
+
+    // Show last 3 scores (most recent first)
+    const recentToShow = this.recent_scores.slice(-3).reverse();
+
+    container.innerHTML = recentToShow.map((entry, index) => {
+      const isLatest = index === 0;
+
+      return `
+        <div class="recent-score-item ${isLatest ? 'latest-score' : ''}">
+          <p class="score-value">Score: ${entry.score}</p>
+        </div>
+      `;
+    }).join('');
+  }
+
+  getRecentScoresStats() {
+    if (this.recent_scores.length === 0) return null;
+
+    const scores = this.recent_scores.map(entry => entry.score);
+
+    return {
+      count: scores.length,
+      scores: scores
+    };
   }
   update(timeDelta) {
     this.add(this.add_vel * timeDelta);
@@ -2114,7 +2186,8 @@ class TranslationManager {
       'game-over': 'GAME OVER',
       'analyzing-performance': 'Analyzing your performance...',
       'error-generating': 'Sorry, there was an error generating your summary. Please try again.',
-      'language-label': 'Language:'
+      'language-label': 'Language:',
+      'recent-game-text': 'Recent games',
     };
   }
 
@@ -2603,17 +2676,26 @@ class GameManager {
       timePlayed: Math.floor(clock.getElapsedTime()),
     };
 
+    const recentStats = score.getRecentScoresStats();
+
     const systemPrompt = 'You are DinoCoach, a concise feedback assistant for the Chrome Dino Runner game. A 2D game where the user plays as a Dino and has to jump or duck obstacles. There is no other functionality. The speed increases as the game goes on. The stats you receive are always from a SINGLE completed game run. "High Score" represents the player\'s best score across ALL previous games, NOT just the current run. Never make value judgments about whether the high score itself is good or bad - you have no benchmark for comparison. Focus on practical tips for jumping over cacti and ducking under pterodactyls based solely on score and survival time, but also be hopeful and fun in your answers.';
 
-    const prompt = `Chrome Dino Game - Latest Run Results:
+    let prompt = `Chrome Dino Game - Latest Run Results:
     Personal High Score: ${gameData.highScore}
     Current Run Score: ${gameData.score}
-    Current Run Survival Time: ${gameData.timePlayed} seconds
+    Current Run Survival Time: ${gameData.timePlayed} seconds`;
+
+    if (recentStats) {
+      prompt += `
+    Recent Scores: [${recentStats.scores.join(', ')}]`;
+    }
+
+    prompt += `
 
     Based ONLY on these metrics, provide:
-    1. A brief assessment comparing current score to personal high score.
+    1. A brief assessment comparing current score to personal high score${recentStats ? ' and recent scores' : ''}.
     2. Two general tips to improve jumping/ducking timing for better survival.
-    Keep your response under 100 words total.`;
+    Keep your response under 150 words total.`;
 
     console.log('Generating game summary using:', this.aiMethod);
 
@@ -2767,6 +2849,7 @@ class GameManager {
     this.cancelStarter();
     // Enable touch controls when game starts
     input.enableTouchControls();
+    this.interface.other.recentScores.classList.remove("hidden");
     clock.getDelta();
     this.render();
     this.loop();
@@ -2790,6 +2873,9 @@ class GameManager {
     player.deathFrame();
     audio.play("killed");
     this.setStarter(0);
+
+    // Record the final score
+    score.addRecentScore(score.score, clock.getElapsedTime());
 
     this.generateGameSummary();
   }
@@ -2911,7 +2997,8 @@ class InterfaceManager {
     };
     this.other = {
       "preloader": document.getElementById("preloader"),
-      "overlay": document.getElementById("chrome-no-internet")
+      "overlay": document.getElementById("chrome-no-internet"),
+      "recentScores": document.getElementById("recent-scores"),
     };
     this.ai = {
       "aiFeedback": document.getElementById("ai-feedback"),
