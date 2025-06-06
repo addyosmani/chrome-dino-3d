@@ -928,9 +928,8 @@ END // CHART'S RULES
   right: 2%;
   background-color: rgba(255, 255, 255, 0.3);
   padding: 20px;
-  max-width: 450px;
-  max-height: 750px;
-  width: 450px;
+  max-height: 70vh;
+  width: 30vw;
   border-radius: 8px;
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
   color: #333;
@@ -940,23 +939,20 @@ END // CHART'S RULES
 }
 
 #ai-feedback h1 {
-  margin: 0 0 10px 0;
+  margin: 0 0 15px 0;
   font-size: 0.875rem;
   color: #5d7b88;
   font-family: 'Press Start 2P', cursive;
 }
 
 #ai-feedback-wrapper {
-  max-width: 450px;
-  max-height: 750px;
-  width: 450px;
+  max-height: 70vh;
   text-align: center;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 #ai-feedback p {
-  max-width: 450px;
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.4;
@@ -968,9 +964,38 @@ END // CHART'S RULES
 }
 
 #ai-feedback #llm-type {
-  padding-top: 10px;
+  margin-top: 15px;
   color: #686868;
   font-size: 0.75rem;
+}
+
+@media (max-width: 1400px) {
+  #ai-feedback {
+    width: 60vw;
+  }
+}
+
+@media (max-width: 1200px) {
+  #ai-feedback {
+    width: 60vw;
+  }
+}
+
+@media (max-width: 992px) {
+  #ai-feedback {
+    width: 75vw;
+  }
+}
+
+@media (max-width: 768px) {
+  #ai-feedback {
+    width: 80vw;
+    max-height: 30vh;
+  }
+
+  #ai-feedback-wrapper {
+    max-height: 20vh;
+  }
 }
 
 @media (max-width: 480px) {
@@ -982,16 +1007,12 @@ END // CHART'S RULES
     left: 50%;
     right: auto;
     transform: translateX(-50%);
-    bottom: 5%;
+    bottom: 2%;
   }
 
   #ai-feedback-wrapper {
     max-height: 20vh;
     overflow-y: scroll;
-  }
-
-  #ai-feedback p {
-    max-width: 85vw;
   }
 
   #game-restart {
