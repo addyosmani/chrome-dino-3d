@@ -2736,6 +2736,7 @@ class GameManager {
     dynoDustEmitter.dead = true;
     audio.stop("bg");
     this.interface.buttons.restart.classList.remove("hidden");
+    this.interface.ai.aiFeedback.classList.remove("hidden");
     player.deathFrame();
     audio.play("killed");
     this.setStarter(0);
@@ -2777,6 +2778,7 @@ class GameManager {
     if (this.isPlaying) {
       this.stop();
     }
+    this.interface.ai.aiFeedback.classList.add("hidden");
     this.reset();
     this.start();
   }
@@ -2851,6 +2853,9 @@ class InterfaceManager {
       "preloader": document.getElementById("preloader"),
       "overlay": document.getElementById("chrome-no-internet")
     };
+    this.ai = {
+      "aiFeedback": document.getElementById("ai-feedback")
+    }
   }
   init() {
     this.buttons.start.addEventListener("click", this.btnStartClick);
