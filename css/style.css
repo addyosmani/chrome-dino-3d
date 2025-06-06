@@ -967,6 +967,63 @@ END // CHART'S RULES
   white-space: pre-wrap;
 }
 
+/* Responsive styles for AI feedback content */
+@media (max-width: 992px) {
+  #ai-feedback {
+    max-width: 350px;
+    width: 350px;
+    max-height: 500px;
+    padding: 15px;
+  }
+
+  #ai-feedback-wrapper {
+    max-width: 350px;
+    width: 350px;
+    max-height: 500px;
+  }
+
+  #ai-feedback p {
+    max-width: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  #ai-feedback {
+    max-width: 85vw;
+    width: 85vw;
+    max-height: 60vh;
+    padding: 12px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: 5%;
+  }
+
+  #ai-feedback-wrapper {
+    max-width: 100%;
+    width: 100%;
+    max-height: 50vh;
+  }
+
+  #ai-feedback p {
+    max-width: 100%;
+  }
+
+}
+
+@media (max-width: 480px) {
+  #ai-feedback {
+    max-width: 85vw;
+    width: 85vw;
+    max-height: 50vh;
+    padding: 10px;
+  }
+
+  #ai-feedback-wrapper {
+    max-height: 40vh;
+  }
+}
+
 #ai-feedback.hidden {
   display: none;
 }

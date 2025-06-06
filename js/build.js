@@ -2779,6 +2779,12 @@ class GameManager {
       this.stop();
     }
     this.interface.ai.aiFeedback.classList.add("hidden");
+
+    const aiFeedbackText = document.getElementById('ai-feedback-text');
+    if (aiFeedbackText) {
+      aiFeedbackText.innerHTML = "";
+    }
+
     this.reset();
     this.start();
   }
@@ -2854,7 +2860,8 @@ class InterfaceManager {
       "overlay": document.getElementById("chrome-no-internet")
     };
     this.ai = {
-      "aiFeedback": document.getElementById("ai-feedback")
+      "aiFeedback": document.getElementById("ai-feedback"),
+      "aiFeedbackText": document.getElementById("ai-feedback-text")
     }
   }
   init() {
