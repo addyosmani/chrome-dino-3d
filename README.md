@@ -22,7 +22,10 @@ While the original features charming pixel art in 2D, this version brings the T-
 
 This game features an AI feedback system that analyzes your performance and provides personalized tips to improve your gameplay. The AI uses a tiered/hybrid approach with multiple fallback options:
 
+![Architecture](/architecture.png)
+
 ### AI Model Priority Flow
+
 1. **Google Gemini** (Server-side) - Primary method until one of the local AI models are loaded/accessible
 2. [**Chrome/Edge Prompt API**](https://developer.chrome.com/docs/extensions/ai/prompt-api) (Built-in browser AI) - Local fallback for supported browsers
 3. [**Transformers.js**](https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct) (Local SmolLM2-1.7B model) - Fallback if Prompt API is not supported
@@ -32,6 +35,7 @@ The game automatically detects available AI capabilities and selects the best op
 ## Running Locally
 
 ### Quick Start (No Google Gemini functionality)
+
 ```bash
 git clone https://github.com/addyosmani/chrome-dino-3d
 cd chrome-dino-3d
@@ -40,9 +44,11 @@ npm run dev
 ```
 
 ### Full Development Setup (with AI Features)
+
 For local development with complete AI functionality:
 
 1. **Clone and install dependencies:**
+
    ```bash
    git clone https://github.com/addyosmani/chrome-dino-3d
    cd chrome-dino-3d
@@ -50,16 +56,19 @@ For local development with complete AI functionality:
    ```
 
 2. **Set up environment variables:**
+
    ```bash
    cp env.example .env
    ```
-   
+
    Edit `.env` and add your Google Gemini API key:
+
    ```
    GEMINI_API_KEY=your_gemini_api_key_here
    ```
-   
+
 3. **Start the development server:**
+
    ```bash
    npm run dev:vercel
    ```
@@ -78,6 +87,7 @@ For local development with complete AI functionality:
 This project is a modernized fork of the original work by Abraham Tugalov ([@priler](https://github.com/priler/dino3d)).
 
 Built with:
+
 - [Three.js](https://threejs.org/) - WebGL 3D Library
 - [MagicaVoxel](https://ephtracy.github.io/) - Voxel art editor
 - [vox.js](https://github.com/daishihmr/vox.js/) - MagicaVoxel parser
