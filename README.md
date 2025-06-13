@@ -32,6 +32,13 @@ This game features an AI feedback system that analyzes your performance and prov
 
 The game automatically detects available AI capabilities and selects the best option. If local models fail, it gracefully falls back to the server-side Gemini API.
 
+### Browser Compatibility
+
+The [Prompt API](https://github.com/webmachinelearning/prompt-api) is currently available in Chrome and Edge Dev/Canary browsers behind feature flags. This is not yet a feature in other browsers!
+
+The Transformer.js model should be supported by every browser with [WebGPU support](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#browser_compatibility).
+
+
 ## Running Locally
 
 ### Quick Start (No Google Gemini functionality)
