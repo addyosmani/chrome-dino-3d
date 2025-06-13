@@ -1,59 +1,82 @@
 import { defineConfig } from 'vite';
-import fs from 'fs';
-import path from 'path';
-
-// Custom plugin to handle file inlining
-function fileInlinerPlugin() {
-  return {
-    name: 'file-inliner',
-    transform(code, id) {
-      // Only process the build.js file
-      if (!id.endsWith('js/src/build.js')) {
-        return null;
-      }
-
-      // Replace each //= filename.js with the contents of that file
-      const regex = /\/\/= (.+)\.js/g;
-      let result = code;
-      let match;
-
-      while ((match = regex.exec(code)) !== null) {
-        const fileName = match[1];
-        const filePath = path.resolve(process.cwd(), 'js/src', `${fileName}.js`);
-        
-        try {
-          const fileContent = fs.readFileSync(filePath, 'utf-8');
-          result = result.replace(match[0], fileContent);
-        } catch (error) {
-          console.error(`Error reading file ${filePath}:`, error);
-        }
-      }
-
-      return result;
-    }
-  };
-}
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
-  plugins: [fileInlinerPlugin()],
   build: {
-    // Don't minify the output
+    // Don't minify the output for easier debugging
     minify: false,
-    // Specify the entry point
+    // Output to dist directory to avoid overwriting source
+    outDir: 'dist',
+    // Specify the entry point - use the actual source file
     rollupOptions: {
-      input: 'js/src/build.js',
-      output: {
-        // Output to js/build.js
-        dir: '.',
-        entryFileNames: 'js/build.js',
-        // format: 'iife',
-        // Don't generate code splitting chunks
-        manualChunks: undefined,
+      input: {
+        main: './index.html',
+        worker: './js/worker.js'
       },
+      output: {
+        // Keep the same structure in dist
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'worker') {
+            return 'js/worker.js';
+          }
+          return 'js/build.js';
+        },
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        chunkFileNames: 'assets/[name]-[hash].js'
+      },
+      external: (id) => {
+        // Don't treat the worker as external when referenced from main
+        if (id.includes('worker.js')) {
+          return false;
+        }
+      }
     },
-    // Don't generate any other files
-    emptyOutDir: false,
-    // Don't copy public assets
+    // Copy public assets and additional directories
     copyPublicDir: false,
+  },
+  // Configure which additional files to copy
+  assetsInclude: ['**/*.vox', '**/*.wav', '**/*.ogg', '**/*.png', '**/*.jpg'],
+  // Use plugin to copy static assets
+  plugins: [
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'libs',
+          dest: ''
+        },
+        {
+          src: 'objects',
+          dest: ''
+        },
+        {
+          src: 'textures',
+          dest: ''
+        },
+        {
+          src: 'sound',
+          dest: ''
+        },
+        {
+          src: 'css',
+          dest: ''
+        },
+        {
+          src: 'media',
+          dest: ''
+        },
+        {
+          src: 'js/config-high.js',
+          dest: 'js'
+        },
+        {
+          src: 'js/config-low.js',
+          dest: 'js'
+        }
+      ]
+    })
+  ],
+  // Ensure worker modules are handled correctly
+  worker: {
+    format: 'es'
   }
 });

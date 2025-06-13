@@ -55,13 +55,56 @@ class InputManager {
     addKey(38, "space");
     addKey(32, "space");
     addKey(81, "debug_speedup");
-    window.addEventListener("keydown", (e) => {
-      setKeyFromKeyCode(e.keyCode, true);
-    });
-    window.addEventListener("keyup", (e) => {
-      setKeyFromKeyCode(e.keyCode, false);
-    });
+    // Event listeners for keyboard support
+    window.addEventListener('keydown', (e) => setKeyFromKeyCode(e.keyCode, true));
+    window.addEventListener('keyup', (e) => setKeyFromKeyCode(e.keyCode, false));
+
+    // Mobile touch support variables
+    this.touchStartTime = 0;
+    this.isDucking = false;
+    this.touchStartHandler = null;
+    this.touchEndHandler = null;
+
+    // Create touch event handlers
+    this.touchStartHandler = (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        this.touchStartTime = Date.now();
+        setKeyFromKeyCode(32, true); // Simulate spacebar (jump)
+      } else if (e.touches.length === 2) {
+        this.isDucking = true;
+        setKeyFromKeyCode(40, true); // Simulate down arrow (duck)
+      }
+    };
+
+    this.touchEndHandler = (e) => {
+      e.preventDefault();
+      if (this.isDucking) {
+        setKeyFromKeyCode(40, false); // Release ducking
+        this.isDucking = false;
+      } else {
+        setKeyFromKeyCode(32, false); // Release jump
+      }
+    };
   }
+
+  enableTouchControls() {
+    if (this.touchStartHandler && this.touchEndHandler) {
+      window.addEventListener('touchstart', this.touchStartHandler);
+      window.addEventListener('touchend', this.touchEndHandler);
+    }
+  }
+
+  disableTouchControls() {
+    if (this.touchStartHandler && this.touchEndHandler) {
+      window.removeEventListener('touchstart', this.touchStartHandler);
+      window.removeEventListener('touchend', this.touchEndHandler);
+      // Reset touch state
+      this.isDucking = false;
+      this.touchStartTime = 0;
+    }
+  }
+
   update() {
     for (const keyState of Object.values(this.keys)) {
       if (keyState.justPressed) {
@@ -497,7 +540,9 @@ class ScoreManager {
     this.lvl = 0;
     this.clock = new THREE.Clock();
     this.last_flash_score = 0;
-    Number.prototype.pad = function(size) {
+    this.recent_scores = [];
+    this.max_recent_scores = 3;
+    Number.prototype.pad = function (size) {
       var s = String(this);
       while (s.length < (size || 2)) {
         s = "0" + s;
@@ -516,6 +561,7 @@ class ScoreManager {
       localStorage.setItem("highest_score", 0);
       localStorage.setItem("highest_score___GLITCH_FIX", true);
     }
+    this.loadRecentScores();
   }
   set(points) {
     this.score = points;
@@ -566,6 +612,75 @@ class ScoreManager {
     this.clock = new THREE.Clock();
     this.lvl = 0;
     this.add_vel = 10;
+  }
+
+  loadRecentScores() {
+    const stored = localStorage.getItem("recent_scores");
+    if (stored) {
+      try {
+        this.recent_scores = JSON.parse(stored);
+        // Ensure we don't exceed max length
+        if (this.recent_scores.length > this.max_recent_scores) {
+          this.recent_scores = this.recent_scores.slice(-this.max_recent_scores);
+          this.saveRecentScores();
+        }
+        // Update display after loading
+        this.updateRecentScoresDisplay();
+      } catch (e) {
+        this.recent_scores = [];
+      }
+    }
+  }
+
+  saveRecentScores() {
+    localStorage.setItem("recent_scores", JSON.stringify(this.recent_scores));
+  }
+
+  addRecentScore(finalScore, timePlayed) {
+    const scoreEntry = {
+      score: Math.floor(finalScore),
+      time: Math.floor(timePlayed),
+      date: Date.now()
+    };
+
+    this.recent_scores.push(scoreEntry);
+
+    // Keep only the most recent scores
+    if (this.recent_scores.length > this.max_recent_scores) {
+      this.recent_scores = this.recent_scores.slice(-this.max_recent_scores);
+    }
+
+    this.saveRecentScores();
+    this.updateRecentScoresDisplay();
+  }
+
+  updateRecentScoresDisplay() {
+    const container = document.getElementById('recent-scores-list');
+    if (!container) return;
+
+    // Show last 3 scores (most recent first)
+    const recentToShow = this.recent_scores.slice(-3).reverse();
+
+    container.innerHTML = recentToShow.map((entry, index) => {
+      const isLatest = index === 0;
+
+      return `
+        <div class="recent-score-item ${isLatest ? 'latest-score' : ''}">
+          <p class="score-value">Score: ${entry.score}</p>
+        </div>
+      `;
+    }).join('');
+  }
+
+  getRecentScoresStats() {
+    if (this.recent_scores.length === 0) return null;
+
+    const scores = this.recent_scores.map(entry => entry.score);
+
+    return {
+      count: scores.length,
+      scores: scores
+    };
   }
   update(timeDelta) {
     this.add(this.add_vel * timeDelta);
@@ -1455,9 +1570,9 @@ class LoadManager {
   constructor() {
     this.assets = {};
     this.vox = {};
-    this.onload = function() {
+    this.onload = function () {
     };
-    this.onassetload = function() {
+    this.onassetload = function () {
     };
   }
   set_status(what, status = true) {
@@ -1654,9 +1769,9 @@ class LoadManager {
   }
 }
 let load_manager = new LoadManager();
-load_manager.set_loader("ground", [], function() {
+load_manager.set_loader("ground", [], function () {
   let parser = new vox.Parser();
-  parser.parse(config.base_path + "objects/ground sand.vox").then(function(voxelData) {
+  parser.parse(config.base_path + "objects/ground sand.vox").then(function (voxelData) {
     let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
     let material = new THREE.MeshLambertMaterial();
     material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1665,9 +1780,9 @@ load_manager.set_loader("ground", [], function() {
     load_manager.set_status("ground", true);
   });
 });
-load_manager.set_loader("ground_bg", [], function() {
+load_manager.set_loader("ground_bg", [], function () {
   let parser = new vox.Parser();
-  parser.parse(config.base_path + "objects/ground sand solid.vox").then(function(voxelData) {
+  parser.parse(config.base_path + "objects/ground sand solid.vox").then(function (voxelData) {
     let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
     let material = new THREE.MeshLambertMaterial();
     material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1676,12 +1791,12 @@ load_manager.set_loader("ground_bg", [], function() {
     load_manager.set_status("ground_bg", true);
   });
 });
-load_manager.set_loader("dyno", ["ground"], function() {
+load_manager.set_loader("dyno", ["ground"], function () {
   let parser = new vox.Parser();
   let frames = [];
   let framesCount = 7;
   for (let i = 0; i <= framesCount; i++) {
-    parser.parse(config.base_path + "objects/t-rex/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/t-rex/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1697,12 +1812,12 @@ load_manager.set_loader("dyno", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("dyno_band", ["dyno"], function() {
+load_manager.set_loader("dyno_band", ["dyno"], function () {
   let parser = new vox.Parser();
   let frames = [];
   let framesCount = 7;
   for (let i = 0; i <= framesCount; i++) {
-    parser.parse(config.base_path + "objects/t-rex/band/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/t-rex/band/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1718,7 +1833,7 @@ load_manager.set_loader("dyno_band", ["dyno"], function() {
     });
   }
 });
-load_manager.set_loader("dyno_death", ["ground"], function() {
+load_manager.set_loader("dyno_death", ["ground"], function () {
   let parser = new vox.Parser();
   let frames = {
     "wow": null,
@@ -1727,7 +1842,7 @@ load_manager.set_loader("dyno_death", ["ground"], function() {
   let framesItems = Object.keys(frames);
   let loaded = 0;
   for (let i = 0; i < framesItems.length; i++) {
-    parser.parse(config.base_path + "objects/t-rex/other/" + framesItems[i] + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/t-rex/other/" + framesItems[i] + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1744,13 +1859,13 @@ load_manager.set_loader("dyno_death", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("cactus", ["ground"], function() {
+load_manager.set_loader("cactus", ["ground"], function () {
   let parser = new vox.Parser();
   scene.getObjectByName("ground");
   let cactus = [];
   let cactusFiles = ["cactus", "cactus_tall", "cactus_thin", "fcactus", "fcactus_tall", "fcactus_thin"];
   for (let i = 0; i <= cactusFiles.length - 1; i++) {
-    parser.parse(config.base_path + "objects/cactus/" + cactusFiles[i] + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/cactus/" + cactusFiles[i] + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.09 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1763,12 +1878,12 @@ load_manager.set_loader("cactus", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("ptero", ["ground", "cactus"], function() {
+load_manager.set_loader("ptero", ["ground", "cactus"], function () {
   let parser = new vox.Parser();
   let frames = [];
   let framesCount = 5;
   for (let i = 0; i <= framesCount; i++) {
-    parser.parse(config.base_path + "objects/ptero/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/ptero/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1781,12 +1896,12 @@ load_manager.set_loader("ptero", ["ground", "cactus"], function() {
     });
   }
 });
-load_manager.set_loader("rocks", ["ground"], function() {
+load_manager.set_loader("rocks", ["ground"], function () {
   let parser = new vox.Parser();
   let rocks = [];
   let rocksCount = 4;
   for (let i = 0; i <= rocksCount; i++) {
-    parser.parse(config.base_path + "objects/rocks/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/rocks/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1799,12 +1914,12 @@ load_manager.set_loader("rocks", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("flowers", ["ground"], function() {
+load_manager.set_loader("flowers", ["ground"], function () {
   let parser = new vox.Parser();
   let flowers = [];
   let flowersCount = 2;
   for (let i = 0; i <= flowersCount; i++) {
-    parser.parse(config.base_path + "objects/flowers/" + i + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/flowers/" + i + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1817,7 +1932,7 @@ load_manager.set_loader("flowers", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("misc", ["ground"], function() {
+load_manager.set_loader("misc", ["ground"], function () {
   let parser = new vox.Parser();
   let misc2 = [];
   let miscItems = [
@@ -1846,7 +1961,7 @@ load_manager.set_loader("misc", ["ground"], function() {
     "seaweed"
   ];
   for (let i = 0; i < miscItems.length; i++) {
-    parser.parse(config.base_path + "objects/misc/" + miscItems[i] + ".vox").then(function(voxelData) {
+    parser.parse(config.base_path + "objects/misc/" + miscItems[i] + ".vox").then(function (voxelData) {
       let builder = new vox.MeshBuilder(voxelData, { voxelSize: 0.1 });
       let material = new THREE.MeshLambertMaterial();
       material.map = vox.MeshBuilder.textureFactory.getTexture(voxelData);
@@ -1860,12 +1975,12 @@ load_manager.set_loader("misc", ["ground"], function() {
     });
   }
 });
-load_manager.set_loader("t_ground", [], function() {
+load_manager.set_loader("t_ground", [], function () {
   let loader = new THREE.TextureLoader();
   let textures = {
     "top": null
   };
-  loader.load(config.base_path + "textures/ground_top.png", function(texture) {
+  loader.load(config.base_path + "textures/ground_top.png", function (texture) {
     texture.magFilter = THREE.NearestFilter;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.offset.set(0, 0);
@@ -1926,7 +2041,7 @@ class EffectsManager {
       "clock": new THREE.Clock()
     };
     if (!config.renderer.effects) {
-      this.update = function() {
+      this.update = function () {
       };
     }
   }
@@ -2050,6 +2165,262 @@ class EffectsManager {
   }
 }
 let effects = new EffectsManager();
+
+class TranslationManager {
+  constructor() {
+    this.currentLanguage = 'en';
+    this.isSupported = 'Translator' in self;
+    this.isInitialized = false;
+
+    // Store original AI feedback text for translation
+    this.originalAIFeedback = '';
+
+    // Translatable text mapping
+    this.translatableElements = {
+      'ai-game-summary': 'AI Game Summary',
+      'no-internet-title': 'No Internet Connection',
+      'try-following': 'Try the following:',
+      'check-network': 'Check your network cables, modem, and router.',
+      'reconnect-wifi': 'Reconnect to your Wi-Fi network.',
+      'start-game': 'Start Game',
+      'game-over': 'GAME OVER',
+      'analyzing-performance': 'Analyzing your performance...',
+      'error-generating': 'Sorry, there was an error generating your summary. Please try again.',
+      'language-label': 'Language:',
+      'recent-game-text': 'Recent games',
+    };
+  }
+
+  async init() {
+    if (!this.isSupported) {
+      console.warn('Translator API not supported in this browser');
+      return false;
+    }
+
+    try {
+      this.isInitialized = true;
+      console.log('Translation Manager initialized');
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize Translation Manager:', error);
+      return false;
+    }
+  }
+
+  setupLanguageSelector() {
+    const languageSelect = document.getElementById('language-select');
+    const languageSelector = document.getElementById('language-selector');
+    const translationStatus = document.getElementById('translation-status');
+
+    if (!languageSelect) return;
+
+    // Hide the entire language selector if translation is not supported
+    if (!this.isSupported) {
+      if (languageSelector) {
+        languageSelector.style.display = 'none';
+      }
+      return;
+    }
+
+    languageSelect.addEventListener('change', async (event) => {
+      const newLanguage = event.target.value;
+      await this.changeLanguage(newLanguage, translationStatus);
+    });
+  }
+
+  async changeLanguage(targetLanguage, statusElement = null) {
+    if (targetLanguage === this.currentLanguage) return;
+
+    // Check if Translator API is available
+    if (!this.isSupported) {
+      console.warn('Translator API not supported in this browser');
+      if (statusElement) {
+        statusElement.textContent = 'Translation not supported in this browser';
+        statusElement.style.display = 'block';
+        setTimeout(() => {
+          statusElement.style.display = 'none';
+        }, 3000);
+      }
+      return;
+    }
+
+    if (statusElement) {
+      statusElement.textContent = 'Loading translator...';
+      statusElement.style.display = 'block';
+    }
+
+    try {
+      // Check if this language pair is supported
+      const availability = await Translator.availability({
+        sourceLanguage: 'en',
+        targetLanguage: targetLanguage
+      });
+
+      console.log(`Translator availability for en->${targetLanguage}: ${availability}`);
+
+      if (availability === 'no') {
+        if (statusElement) {
+          statusElement.textContent = `Translation to ${this.getLanguageName(targetLanguage)} is not supported`;
+          setTimeout(() => {
+            statusElement.style.display = 'none';
+          }, 2000);
+        }
+        console.warn(`Translation to ${targetLanguage} is not supported`);
+        // Reset to English
+        const languageSelect = document.getElementById('language-select');
+        if (languageSelect) {
+          languageSelect.value = 'en';
+        }
+        this.currentLanguage = 'en';
+        this.resetUIToEnglish();
+        return;
+      }
+
+      if (availability !== 'readily-available') {
+        if (statusElement) {
+          statusElement.textContent = `Downloading language model (${targetLanguage})...`;
+        }
+      }
+
+
+      this.currentLanguage = targetLanguage;
+
+      // Translate all UI elements
+      await this.translateUI();
+
+      if (statusElement) {
+        statusElement.textContent = '';
+        statusElement.style.display = 'none';
+      }
+
+      console.log(`Language changed to: ${targetLanguage}`);
+
+    } catch (error) {
+      console.error('Error changing language:', error);
+      if (statusElement) {
+        statusElement.textContent = `Translation to ${targetLanguage} not available`;
+        setTimeout(() => {
+          statusElement.style.display = 'none';
+        }, 2000);
+      }
+    }
+  }
+
+  async translateText(text, targetLanguage = null) {
+    if (!this.isSupported || !text) return text;
+
+    const language = targetLanguage || this.currentLanguage;
+    if (language === 'en') return text;
+
+    try {
+      // Check if Translator API is actually available (not just 'Translator' in self)
+      if (typeof Translator === 'undefined') {
+        console.warn('Translator API not available');
+        return text;
+      }
+
+      // Never create a translator where source equals target
+      if (language === 'en') {
+        return text;
+      }
+
+      const translator = await Translator.create({
+        sourceLanguage: 'en',
+        targetLanguage: language
+      });
+
+      return await translator.translate(text);
+    } catch (error) {
+      console.error('Translation error:', error);
+      return text;
+    }
+  }
+
+  setOriginalAIFeedback(text) {
+    this.originalAIFeedback = text;
+  }
+
+  async translateUI() {
+    if (this.currentLanguage === 'en') {
+      // Reset to original English text
+      this.resetUIToEnglish();
+      return;
+    }
+
+    // Translate all marked elements
+    for (const [elementId, originalText] of Object.entries(this.translatableElements)) {
+      const element = document.querySelector(`[data-translate="${elementId}"]`) ||
+        document.getElementById(elementId);
+
+      if (element) {
+        try {
+          const translatedText = await this.translateText(originalText);
+          element.textContent = translatedText;
+        } catch (error) {
+          console.error(`Error translating ${elementId}:`, error);
+        }
+      }
+    }
+  }
+
+  resetUIToEnglish() {
+    // Reset all UI elements to original English text
+    for (const [elementId, originalText] of Object.entries(this.translatableElements)) {
+      const element = document.querySelector(`[data-translate="${elementId}"]`) ||
+        document.getElementById(elementId);
+
+      if (element) {
+        element.textContent = originalText;
+      }
+    }
+  }
+
+  async translateGamePrompt(systemPrompt, userPrompt) {
+    if (this.currentLanguage === 'en' || !this.isSupported) {
+      return { systemPrompt, userPrompt };
+    }
+
+    try {
+      const translatedSystemPrompt = await this.translateText(systemPrompt);
+      const translatedUserPrompt = await this.translateText(userPrompt);
+
+      return {
+        systemPrompt: translatedSystemPrompt,
+        userPrompt: translatedUserPrompt
+      };
+    } catch (error) {
+      console.error('Error translating prompts:', error);
+      return { systemPrompt, userPrompt }; // Return original if translation fails
+    }
+  }
+
+  async translateResponse(responseText) {
+    if (this.currentLanguage === 'en' || !responseText || !this.isSupported) {
+      return responseText;
+    }
+
+    try {
+      // For responses, we need to translate FROM English TO current language
+      return await this.translateText(responseText);
+    } catch (error) {
+      console.error('Error translating response:', error);
+      return responseText;
+    }
+  }
+
+  getLanguageName(code) {
+    const languages = {
+      'en': 'English',
+      'es': 'Español',
+      'ru': 'Русский',
+      'ja': '日本語',
+      'zh': '中文',
+      'hi': 'हिन्दी'
+    };
+    return languages[code] || code;
+  }
+}
+
 class GameManager {
   constructor(interface_manager) {
     this.isPlaying = false;
@@ -2059,12 +2430,34 @@ class GameManager {
     this.interface = interface_manager;
     this.starter = null;
     this.stats = null;
+    this.languageModel = null;
+    this.worker = null;
+    this.workerReady = false;
+    // AI method tracking
+    this.aiMethod = 'server';
+    this.localModelReady = false;
+
+    this.translator = new TranslationManager();
   }
+
   init() {
+    // Initialize translation manager
+    this.translator.init();
+
+    // Start with server-side AI available immediately
+    console.log('AI initialized with Gemini API');
+    this.updateLLMTypeDisplay();
+
+    // Initialize local models in the background
+    this.initLocalModels();
+
     this.interface.init();
     visibly.visibilitychange(this.tabVisibilityChanged);
-    window.onload = function() {
-      load_manager.load_all(function() {
+    window.onload = function () {
+      // Setup language selector after DOM is loaded
+      game.translator.setupLanguageSelector();
+
+      load_manager.load_all(function () {
         game.interface.other.preloader.classList.add("hidden");
         if (config.debug) {
           game.interface.btnStartClick();
@@ -2072,27 +2465,326 @@ class GameManager {
           game.interface.buttons.start.classList.remove("hidden");
           game.setStarter();
         }
-      }, function() {
+      }, function () {
         let p = load_manager.getLoadPercentage();
         game.interface.indicators.load.classList.add("bar-" + p);
       });
     };
     if (config.debug) {
       enemy.config.enable_collisions = false;
-      input.addKeyCallback("debug_speedup", "justPressed", function() {
+      input.addKeyCallback("debug_speedup", "justPressed", function () {
         enemy.increase_velocity(1);
       });
       enemy.increase_velocity(10);
     }
   }
+
+  async initLocalModels() {
+    // Try to initialize Chrome Prompt API first
+    if ('LanguageModel' in self) {
+      try {
+        console.log('Attempting to initialize Chrome Prompt API...');
+        const { available, defaultTemperature, defaultTopK, maxTopK } = await LanguageModel.params();
+
+        if (available !== "no") {
+          this.languageModel = await LanguageModel.create({
+            temperature: 0.2,
+            topK: defaultTopK,
+          });
+
+          console.log('Chrome Prompt API initialized successfully');
+          this.switchToLocalModel('prompt-api');
+          return;
+        }
+      } catch (err) {
+        console.error('Chrome Prompt API initialization failed:', err);
+      }
+    }
+
+    // If Prompt API fails, try Transformers.js
+    console.log('Falling back to Transformers.js...');
+    this.initTransformersWorker();
+  }
+
+  switchToLocalModel(modelType) {
+    this.localModelReady = true;
+    this.aiMethod = modelType;
+    this.updateLLMTypeDisplay();
+    console.log(`Switched to local AI model: ${modelType}`);
+  }
+
+  updateLLMTypeDisplay() {
+    const llmTypeElement = document.getElementById('llm-type');
+    if (!llmTypeElement) return;
+
+    let displayText = '';
+    switch (this.aiMethod) {
+      case 'server':
+        displayText = 'Using Gemini server model';
+        break;
+      case 'prompt-api':
+        displayText = 'Using Built-in Gemini Nano model';
+        break;
+      case 'transformers':
+        displayText = 'Using Transformers.js (SmolLM2-1.7B) model';
+        break;
+      default:
+        displayText = 'Using Gemini server model';
+    }
+
+    llmTypeElement.textContent = displayText;
+  }
+
+  initTransformersWorker() {
+    if (this.worker) {
+      console.warn('Transformers.js worker already initialized.');
+      return;
+    }
+
+    try {
+      console.log('Initializing Transformers.js worker...');
+
+      const workerPath = './js/worker.js';
+      console.log('Using worker path:', workerPath);
+
+      this.worker = new Worker(workerPath, {
+        type: 'module'
+      });
+
+      this.worker.onerror = (error) => {
+        console.error('Worker error:', error);
+        this.workerReady = false;
+
+        // Stay with server-side if worker fails
+        console.log('Staying with server-side AI due to worker error');
+      };
+
+      this.worker.onmessage = (e) => {
+        const { status, output, data } = e.data;
+
+        switch (status) {
+          case 'loading':
+            console.log('Transformers.js loading:', data);
+            break;
+
+          case 'ready':
+            console.log('Transformers.js worker is ready');
+            this.workerReady = true;
+            this.switchToLocalModel('transformers');
+            break;
+
+          case 'start':
+            // Only clear if we're actually using transformers for generation
+            if (this.aiMethod === 'transformers') {
+              const aiFeedbackText = document.getElementById('ai-feedback-text');
+              aiFeedbackText.innerHTML = '';
+            }
+            break;
+
+          case 'update':
+            // Only update if we're actually using transformers for generation
+            if (this.aiMethod === 'transformers') {
+              const aiFeedbackText = document.getElementById('ai-feedback-text');
+              aiFeedbackText.innerHTML += output;
+            }
+            break;
+
+          case 'complete':
+            // Only show result if we're actually using transformers for generation
+            if (this.aiMethod === 'transformers') {
+              const aiFeedbackText = document.getElementById('ai-feedback-text');
+              const match = output[0].match(/<\|im_start\|>assistant\s*(.*?)<\|im_end\|>/s);
+              const finalResult = match ? match[1].trim() : output[0];
+              aiFeedbackText.innerHTML = finalResult;
+            }
+            break;
+
+          case 'error':
+            console.error('Worker error:', data);
+            // Only show error if we're actually using transformers for generation
+            if (this.aiMethod === 'transformers') {
+              const aiFeedbackText = document.getElementById('ai-feedback-text');
+              aiFeedbackText.innerHTML = 'Error generating summary. Please try again.';
+            }
+            break;
+        }
+      };
+
+      console.log('Sending load message to worker...');
+      this.worker.postMessage({ type: 'load' });
+    } catch (error) {
+      console.error('Failed to initialize worker:', error);
+      this.workerReady = false;
+      console.log('Staying with server-side AI due to worker initialization failure');
+    }
+  }
+
+  async generateGameSummaryGemini(gameData, systemPrompt, prompt) {
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+
+      console.log('Generating summary via Vercel API for score:', gameData.score);
+
+      const response = await fetch(`${apiBaseUrl}/api/generate-summary`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          systemPrompt,
+          prompt
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Server responded with status: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let summary = '';
+
+      const aiFeedbackText = document.getElementById('ai-feedback-text');
+      aiFeedbackText.innerHTML = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        summary += chunk;
+
+        // Update UI with each chunk for streaming effect
+        aiFeedbackText.innerHTML = summary;
+      }
+
+      console.log('Vercel API result:', summary);
+      return summary;
+
+    } catch (error) {
+      console.error('Vercel API request failed:', error);
+      throw error;
+    }
+  }
+
+  async generateGameSummary() {
+    const gameData = {
+      score: Math.floor(score.score),
+      highScore: Math.floor(score.highest_score),
+      timePlayed: Math.floor(clock.getElapsedTime()),
+    };
+
+    const recentStats = score.getRecentScoresStats();
+
+    const systemPrompt = 'You are DinoCoach, a concise feedback assistant for the Chrome Dino Runner game. A 2D game where the user plays as a Dino and has to jump or duck obstacles. There is no other functionality. The speed increases as the game goes on. The stats you receive are always from a SINGLE completed game run. "High Score" represents the player\'s best score across ALL previous games, NOT just the current run. Never make value judgments about whether the high score itself is good or bad - you have no benchmark for comparison. Focus on practical tips for jumping over cacti and ducking under pterodactyls based solely on score and survival time, but also be hopeful and fun in your answers.';
+
+    let prompt = `Chrome Dino Game - Latest Run Results:
+    Personal High Score: ${gameData.highScore}
+    Current Run Score: ${gameData.score}
+    Current Run Survival Time: ${gameData.timePlayed} seconds`;
+
+    if (recentStats) {
+      prompt += `
+    Recent Scores: [${recentStats.scores.join(', ')}]`;
+    }
+
+    prompt += `
+
+    Based ONLY on these metrics, provide:
+    1. A brief assessment comparing current score to personal high score${recentStats ? ' and recent scores' : ''}.
+    2. Two general tips to improve jumping/ducking timing for better survival.
+    Keep your response under 150 words total.`;
+
+    console.log('Generating game summary using:', this.aiMethod);
+
+    const aiFeedbackText = document.getElementById('ai-feedback-text');
+    this.updateLLMTypeDisplay();
+
+    const analyzingMessage = await this.translator.translateText('Analyzing your performance...');
+
+    // Only show "Analyzing..." for local models, not for Gemini API (since streaming clears it)
+    if (this.aiMethod !== 'server') {
+      aiFeedbackText.innerHTML = analyzingMessage;
+    }
+
+    try {
+      // Translate prompts if needed (for non-English languages)
+      const { systemPrompt: translatedSystemPrompt, userPrompt: translatedPrompt } =
+        await this.translator.translateGamePrompt(systemPrompt, prompt);
+
+      if (this.aiMethod === 'prompt-api' && this.languageModel) {
+        // Use Chrome Prompt API - always create a fresh session to ensure correct language
+        this.session = await LanguageModel.create({
+          initialPrompts: [{
+            role: 'system',
+            content: translatedSystemPrompt
+          }],
+          temperature: 0.4,
+          topK: (await LanguageModel.params()).defaultTopK
+        });
+
+        const stream = this.session.promptStreaming(translatedPrompt);
+        let result = '';
+
+        aiFeedbackText.innerHTML = '';
+
+        for await (const chunk of stream) {
+          result += chunk;
+          const translatedChunk = await this.translator.translateResponse(chunk);
+          aiFeedbackText.innerHTML += translatedChunk;
+        }
+
+        console.log('Chrome Prompt API result:', result);
+
+      } else if (this.aiMethod === 'transformers' && this.worker && this.workerReady) {
+        // Use Transformers.js
+        const messages = [
+          { role: 'system', content: translatedSystemPrompt },
+          { role: 'user', content: translatedPrompt }
+        ];
+
+        this.worker.postMessage({
+          type: 'generate',
+          data: messages
+        });
+
+      } else {
+        // Use Vercel API (streaming handled internally)
+        const summary = await this.generateGameSummaryGemini(gameData, translatedSystemPrompt, translatedPrompt);
+        console.log('Vercel API result:', summary);
+      }
+
+    } catch (error) {
+      console.error('Error generating game summary:', error);
+
+      // If local model fails, try server-side as fallback
+      if (this.aiMethod !== 'server') {
+        console.log('Local model failed, falling back to Vercel API...');
+        try {
+          const summary = await this.generateGameSummaryGemini(gameData, systemPrompt, prompt);
+          aiFeedbackText.innerHTML = summary;
+        } catch (serverError) {
+          console.error('Vercel API fallback also failed:', serverError);
+          const errorMessage = 'Sorry, there was an error generating your summary. Please try again.';
+          aiFeedbackText.innerHTML = errorMessage;
+        }
+      } else {
+        const errorMessage = 'Sorry, there was an error generating your summary. Please try again.';
+        aiFeedbackText.innerHTML = errorMessage;
+      }
+    }
+  }
+
   setStarter(timeout = 600) {
     if (!this.starter) {
-      this.starter = input.addKeyCallback("space", "justPressed", function() {
+      this.starter = input.addKeyCallback("space", "justPressed", function () {
         game.starter = null;
         audio.play("jump");
         if (timeout > 0) {
           game.interface.other.overlay.classList.add("before-start");
-          setTimeout(function() {
+          setTimeout(function () {
             game.interface.btnStartClick();
           }, timeout);
         } else {
@@ -2114,6 +2806,9 @@ class GameManager {
     this.isPlaying = true;
     enemy.increase_velocity(15, true);
     score.set(0);
+    clock.stop();
+    clock.elapsedTime = 0;
+    clock.start();
     nature.initGround();
     nature.initEarth();
     nature.initGroundDecoration("first", -17.3, nature.cache.earth.box.max.y);
@@ -2152,6 +2847,9 @@ class GameManager {
     enemy.init();
     audio.play("bg");
     this.cancelStarter();
+    // Enable touch controls when game starts
+    input.enableTouchControls();
+    this.interface.other.recentScores.classList.remove("hidden");
     clock.getDelta();
     this.render();
     this.loop();
@@ -2164,14 +2862,22 @@ class GameManager {
       return false;
     }
     this.isPlaying = false;
+    // Disable touch controls when game stops
+    input.disableTouchControls();
     dynoDustEmitter.removeAllParticles();
     dynoDustEmitter.stopEmit();
     dynoDustEmitter.dead = true;
     audio.stop("bg");
     this.interface.buttons.restart.classList.remove("hidden");
+    this.interface.ai.aiFeedback.classList.remove("hidden");
     player.deathFrame();
     audio.play("killed");
     this.setStarter(0);
+
+    // Record the final score
+    score.addRecentScore(score.score, clock.getElapsedTime());
+
+    this.generateGameSummary();
   }
   pause() {
     if (!this.isPlaying) {
@@ -2179,6 +2885,8 @@ class GameManager {
     }
     this.isPaused = true;
     this.isPlaying = false;
+    // Disable touch controls when paused
+    input.disableTouchControls();
     audio.pause("bg");
   }
   resume() {
@@ -2187,6 +2895,8 @@ class GameManager {
     }
     this.isPlaying = true;
     this.isPaused = false;
+    // Re-enable touch controls when resuming
+    input.enableTouchControls();
     audio.resume("bg");
     clock.getDelta();
     this.render();
@@ -2199,12 +2909,22 @@ class GameManager {
     score.reset();
     player.reset();
     effects.reset();
+    clock.stop();
+    clock.elapsedTime = 0;
+    clock.start();
     this.render();
   }
   restart() {
     if (this.isPlaying) {
       this.stop();
     }
+    this.interface.ai.aiFeedback.classList.add("hidden");
+
+    const aiFeedbackText = document.getElementById('ai-feedback-text');
+    if (aiFeedbackText) {
+      aiFeedbackText.innerHTML = "";
+    }
+
     this.reset();
     this.start();
   }
@@ -2248,10 +2968,22 @@ class GameManager {
     if (!this.isPlaying) {
       return false;
     }
-    requestAnimationFrame(function() {
+    requestAnimationFrame(function () {
       game.loop();
     });
     this.render();
+  }
+
+  async checkWebGPUSupport() {
+    try {
+      if (!navigator.gpu) {
+        return false;
+      }
+      const adapter = await navigator.gpu.requestAdapter();
+      return !!adapter;
+    } catch (e) {
+      return false;
+    }
   }
 }
 class InterfaceManager {
@@ -2265,8 +2997,13 @@ class InterfaceManager {
     };
     this.other = {
       "preloader": document.getElementById("preloader"),
-      "overlay": document.getElementById("chrome-no-internet")
+      "overlay": document.getElementById("chrome-no-internet"),
+      "recentScores": document.getElementById("recent-scores"),
     };
+    this.ai = {
+      "aiFeedback": document.getElementById("ai-feedback"),
+      "aiFeedbackText": document.getElementById("ai-feedback-text")
+    }
   }
   init() {
     this.buttons.start.addEventListener("click", this.btnStartClick);
@@ -2275,6 +3012,13 @@ class InterfaceManager {
   btnStartClick(e) {
     game.interface.buttons.start.display = "none";
     document.body.classList.add("game-started");
+
+    // Hide language selector when game starts
+    const languageSelector = document.getElementById("language-selector");
+    if (languageSelector) {
+      languageSelector.style.display = "none";
+    }
+
     game.start();
   }
   btnRestartClick(e) {
