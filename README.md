@@ -32,9 +32,21 @@ This game features an AI feedback system that analyzes your performance and prov
 
 The game automatically detects available AI capabilities and selects the best option. If local models fail, it gracefully falls back to the server-side Gemini API.
 
+### AI Language Translation
+
+The game features built-in language translation powered by the [Translation API](https://github.com/webmachinelearning/translation-api). This AI-powered system automatically translates:
+
+- Game interface elements
+- AI feedback and tips
+- Game instructions and controls
+
+The translation system supports multiple languages, with the full list available on the [here](/index.html). If your preferred language isn't supported, you can either:
+- Open an issue to request language support
+- Submit a pull request to add new language translations
+
 ### Browser Compatibility
 
-The [Prompt API](https://github.com/webmachinelearning/prompt-api) is currently available in Chrome and Edge Dev/Canary browsers behind feature flags. This is not yet a feature in other browsers!
+The [Prompt API](https://github.com/webmachinelearning/prompt-api) and [Translation API](https://github.com/webmachinelearning/translation-api) are currently available in Chrome and Edge Dev/Canary browsers behind feature flags. This is not yet a feature in other browsers!
 
 The Transformer.js model should be supported by every browser with [WebGPU support](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#browser_compatibility).
 
