@@ -26,7 +26,7 @@ This game features an AI feedback system that analyzes your performance and prov
 
 ### AI Model Priority Flow
 
-1. **Google Gemini** (Server-side) - Primary method until one of the local AI models are loaded/accessible
+1. **Google Gemini 2.0 Flash** (Server-side) - Primary method until one of the local AI models are loaded/accessible
 2. [**Chrome/Edge Prompt API**](https://developer.chrome.com/docs/extensions/ai/prompt-api) (Built-in browser AI) - Local fallback for supported browsers
 3. [**Transformers.js**](https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct) (Local SmolLM2-1.7B model) - Fallback if Prompt API is not supported
 
@@ -79,7 +79,7 @@ For local development with complete AI functionality:
 ### AI Development Notes
 
 - **Local AI Models**: Chrome Prompt API and Transformers.js models run entirely in the browser
-- **Fallback System**: If local models fail to load, the game automatically falls back to server-side AI
+- **Fallback System**: If local models fail to load, the game automatically falls back to server-side AI (Gemini 2.0 Flash)
 - **WebGPU Required**: Transformers.js & the Prompt API require a WebGPU-compatible browser for optimal performance
 
 ## Credits
