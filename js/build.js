@@ -2849,7 +2849,9 @@ class GameManager {
     this.cancelStarter();
     // Enable touch controls when game starts
     input.enableTouchControls();
-    this.interface.other.recentScores.classList.remove("hidden");
+    if (score.recent_scores.length > 0) {
+      this.interface.other.recentScores.classList.remove("hidden");
+    }
     clock.getDelta();
     this.render();
     this.loop();
