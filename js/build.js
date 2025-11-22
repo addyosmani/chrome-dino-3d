@@ -1,3 +1,16 @@
+import { marked } from 'marked';
+
+// Helper function to safely render markdown to HTML
+function renderMarkdown(text) {
+  if (!text) return '';
+  try {
+    return marked.parse(text);
+  } catch (error) {
+    console.error('Error parsing markdown:', error);
+    return text; // Fallback to plain text if parsing fails
+  }
+}
+
 class InputManager {
   constructor() {
     this.keys = {};
@@ -2578,6 +2591,7 @@ class GameManager {
             if (this.aiMethod === 'transformers') {
               const aiFeedbackText = document.getElementById('ai-feedback-text');
               aiFeedbackText.innerHTML = '';
+              aiFeedbackText.dataset.rawText = '';
             }
             break;
 
@@ -2585,7 +2599,10 @@ class GameManager {
             // Only update if we're actually using transformers for generation
             if (this.aiMethod === 'transformers') {
               const aiFeedbackText = document.getElementById('ai-feedback-text');
-              aiFeedbackText.innerHTML += output;
+              const currentText = aiFeedbackText.dataset.rawText || '';
+              const newText = currentText + output;
+              aiFeedbackText.dataset.rawText = newText;
+              aiFeedbackText.innerHTML = renderMarkdown(newText);
             }
             break;
 
@@ -2595,7 +2612,7 @@ class GameManager {
               const aiFeedbackText = document.getElementById('ai-feedback-text');
               const match = output[0].match(/<\|im_start\|>assistant\s*(.*?)<\|im_end\|>/s);
               const finalResult = match ? match[1].trim() : output[0];
-              aiFeedbackText.innerHTML = finalResult;
+              aiFeedbackText.innerHTML = renderMarkdown(finalResult);
             }
             break;
 
@@ -2656,8 +2673,8 @@ class GameManager {
         const chunk = decoder.decode(value, { stream: true });
         summary += chunk;
 
-        // Update UI with each chunk for streaming effect
-        aiFeedbackText.innerHTML = summary;
+        // Update UI with each chunk for streaming effect - render markdown
+        aiFeedbackText.innerHTML = renderMarkdown(summary);
       }
 
       console.log('Vercel API result:', summary);
@@ -2733,7 +2750,11 @@ class GameManager {
         for await (const chunk of stream) {
           result += chunk;
           const translatedChunk = await this.translator.translateResponse(chunk);
-          aiFeedbackText.innerHTML += translatedChunk;
+          // Accumulate and render markdown
+          const currentText = aiFeedbackText.dataset.rawText || '';
+          const newText = currentText + translatedChunk;
+          aiFeedbackText.dataset.rawText = newText;
+          aiFeedbackText.innerHTML = renderMarkdown(newText);
         }
 
         console.log('Chrome Prompt API result:', result);
@@ -2764,7 +2785,7 @@ class GameManager {
         console.log('Local model failed, falling back to Vercel API...');
         try {
           const summary = await this.generateGameSummaryGemini(gameData, systemPrompt, prompt);
-          aiFeedbackText.innerHTML = summary;
+          aiFeedbackText.innerHTML = renderMarkdown(summary);
         } catch (serverError) {
           console.error('Vercel API fallback also failed:', serverError);
           const errorMessage = 'Sorry, there was an error generating your summary. Please try again.';

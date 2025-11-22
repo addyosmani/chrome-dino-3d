@@ -17,6 +17,7 @@
   "dependencies": {
     "@google/genai": "1.4.0",
     "@huggingface/transformers": "^3.5.0",
+    "marked": "^17.0.1",
     "vite": "^5.0.0"
   },
   "devDependencies": {
