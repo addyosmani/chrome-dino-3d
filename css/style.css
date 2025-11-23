@@ -969,6 +969,85 @@ END // CHART'S RULES
   font-size: 0.75rem;
 }
 
+/* Markdown rendering styles for AI feedback */
+#ai-feedback-text h1,
+#ai-feedback-text h2,
+#ai-feedback-text h3,
+#ai-feedback-text h4,
+#ai-feedback-text h5,
+#ai-feedback-text h6 {
+  margin: 0.75em 0 0.5em 0;
+  font-weight: bold;
+  line-height: 1.3;
+  color: #2c3e50;
+}
+
+#ai-feedback-text h1 { font-size: 1.25rem; }
+#ai-feedback-text h2 { font-size: 1.1rem; }
+#ai-feedback-text h3 { font-size: 1rem; }
+#ai-feedback-text h4,
+#ai-feedback-text h5,
+#ai-feedback-text h6 { font-size: 0.9rem; }
+
+#ai-feedback-text ul,
+#ai-feedback-text ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+  text-align: left;
+}
+
+#ai-feedback-text li {
+  margin: 0.25em 0;
+  line-height: 1.4;
+}
+
+#ai-feedback-text strong {
+  font-weight: bold;
+  color: #1a252f;
+}
+
+#ai-feedback-text em {
+  font-style: italic;
+}
+
+#ai-feedback-text code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.15em 0.3em;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.85em;
+}
+
+#ai-feedback-text pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.75em;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+#ai-feedback-text pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+#ai-feedback-text blockquote {
+  margin: 0.5em 0;
+  padding-left: 1em;
+  border-left: 3px solid #5d7b88;
+  color: #555;
+  font-style: italic;
+}
+
+#ai-feedback-text a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+#ai-feedback-text a:hover {
+  text-decoration: underline;
+}
+
 #ai-feedback.hidden {
   display: none;
 }
