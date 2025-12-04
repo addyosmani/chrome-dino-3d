@@ -2056,6 +2056,7 @@ class EffectsManager {
     };
     this.winter = {
       "is_active": false,
+      "originalMaterialColors": /* @__PURE__ */ new Map(),
       "colors": {
         "fog": {
           "normal_day": [0.91, 0.7, 0.32],
@@ -2146,7 +2147,12 @@ class EffectsManager {
   reset() {
     this.stopTransition();
     this.changeDaytime("day");
-    this.winter.is_active = false;
+    if (this.winter.is_active) {
+      this.winter.is_active = true;
+      this.toggleWinterMode();
+    } else {
+      this.winter.originalMaterialColors.clear();
+    }
   }
   toggleWinterMode() {
     this.winter.is_active = !this.winter.is_active;
@@ -2168,6 +2174,7 @@ class EffectsManager {
       if (nature.water) {
         nature.water.material.color.setHex(this.winter.colors.water.winter);
       }
+      this.applyWinterMaterialFilter();
       if (!this.winter.originalDaytimeColors) {
         this.winter.originalDaytimeColors = {
           fog: {
@@ -2206,7 +2213,53 @@ class EffectsManager {
       if (nature.water) {
         nature.water.material.color.setHex(this.winter.colors.water.normal);
       }
+      this.restoreOriginalMaterialColors();
     }
+  }
+  applyWinterMaterialFilter() {
+    scene.traverse((object) => {
+      if (object.isMesh && object.material) {
+        const material = object.material;
+        if (this.winter.originalMaterialColors.has(material.uuid)) {
+          return;
+        }
+        if (material.color) {
+          this.winter.originalMaterialColors.set(material.uuid, material.color.clone());
+          const originalColor = material.color.clone();
+          const h = {};
+          originalColor.getHSL(h);
+          let newHue = h.h;
+          let newSat = h.s;
+          let newLight = h.l;
+          if (h.h >= 0.2 && h.h <= 0.4) {
+            newHue = 0.55 + (h.h - 0.2) * 0.5;
+            newSat = h.s * 0.4;
+            newLight = Math.min(1, h.l * 1.3 + 0.15);
+          } else if (h.h >= 0.05 && h.h <= 0.2) {
+            newHue = 0.58;
+            newSat = h.s * 0.3;
+            newLight = Math.min(1, h.l * 1.2 + 0.1);
+          } else {
+            newSat = h.s * 0.5;
+            newLight = Math.min(1, h.l * 1.15 + 0.05);
+            newHue = h.h + (0.6 - h.h) * 0.3;
+          }
+          material.color.setHSL(newHue, newSat, newLight);
+        }
+      }
+    });
+  }
+  restoreOriginalMaterialColors() {
+    scene.traverse((object) => {
+      if (object.isMesh && object.material) {
+        const material = object.material;
+        const originalColor = this.winter.originalMaterialColors.get(material.uuid);
+        if (originalColor) {
+          material.color.copy(originalColor);
+        }
+      }
+    });
+    this.winter.originalMaterialColors.clear();
   }
   pause() {
     this.pause_time = this.daytime.clock.getElapsedTime();

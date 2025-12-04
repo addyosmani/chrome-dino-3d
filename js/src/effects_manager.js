@@ -56,6 +56,7 @@ class EffectsManager {
       // winter mode
       this.winter = {
         "is_active": false,
+        "originalMaterialColors": new Map(), // Store original material colors
         "colors": {
           "fog": {
             "normal_day": [.91, .70, .32],
@@ -176,7 +177,13 @@ class EffectsManager {
     reset() {
       this.stopTransition();
       this.changeDaytime('day');
-      this.winter.is_active = false;
+      // Reset winter mode
+      if (this.winter.is_active) {
+        this.winter.is_active = true; // Set to true so toggle will turn it off
+        this.toggleWinterMode(); // This will turn it off and restore colors
+      } else {
+        this.winter.originalMaterialColors.clear();
+      }
     }
 
     toggleWinterMode() {
@@ -203,6 +210,9 @@ class EffectsManager {
         if(nature.water) {
           nature.water.material.color.setHex(this.winter.colors.water.winter);
         }
+
+        // Apply winter filter to all scene objects
+        this.applyWinterMaterialFilter();
 
         // Store original daytime colors and update them for winter
         if(!this.winter.originalDaytimeColors) {
@@ -251,7 +261,84 @@ class EffectsManager {
         if(nature.water) {
           nature.water.material.color.setHex(this.winter.colors.water.normal);
         }
+
+        // Restore original material colors
+        this.restoreOriginalMaterialColors();
       }
+    }
+
+    applyWinterMaterialFilter() {
+      // Traverse the scene and apply winter color filter to all materials
+      scene.traverse((object) => {
+        if (object.isMesh && object.material) {
+          const material = object.material;
+          
+          // Skip if already processed
+          if (this.winter.originalMaterialColors.has(material.uuid)) {
+            return;
+          }
+          
+          // Store original color
+          if (material.color) {
+            this.winter.originalMaterialColors.set(material.uuid, material.color.clone());
+            
+            // Apply winter color transformation
+            // Convert greens/yellows to blues/whites, browns to grays
+            const originalColor = material.color.clone();
+            const h = {}; // hue, saturation, lightness
+            originalColor.getHSL(h);
+            
+            // Winter color transformation logic:
+            // - Greens (hue ~0.3) -> Blue-whites (hue ~0.55-0.65)
+            // - Browns/yellows (hue ~0.1) -> Grays/blues (hue ~0.6)
+            // - Reduce saturation for snowy/icy look
+            // - Increase lightness for winter brightness
+            
+            let newHue = h.h;
+            let newSat = h.s;
+            let newLight = h.l;
+            
+            // Transform green hues (0.2-0.4) to blue-white hues (0.55-0.65)
+            if (h.h >= 0.2 && h.h <= 0.4) {
+              newHue = 0.55 + (h.h - 0.2) * 0.5; // Map to blue range
+              newSat = h.s * 0.4; // Reduce saturation for icy look
+              newLight = Math.min(1.0, h.l * 1.3 + 0.15); // Increase brightness
+            }
+            // Transform yellow/brown hues (0.05-0.2) to blue-gray (0.55-0.6)
+            else if (h.h >= 0.05 && h.h <= 0.2) {
+              newHue = 0.58; // Blue-gray hue
+              newSat = h.s * 0.3; // Desaturate
+              newLight = Math.min(1.0, h.l * 1.2 + 0.1); // Lighten
+            }
+            // For other colors, desaturate and tint blue
+            else {
+              newSat = h.s * 0.5;
+              newLight = Math.min(1.0, h.l * 1.15 + 0.05);
+              // Slightly shift hue toward blue
+              newHue = h.h + (0.6 - h.h) * 0.3;
+            }
+            
+            material.color.setHSL(newHue, newSat, newLight);
+          }
+        }
+      });
+    }
+
+    restoreOriginalMaterialColors() {
+      // Restore all original material colors
+      scene.traverse((object) => {
+        if (object.isMesh && object.material) {
+          const material = object.material;
+          const originalColor = this.winter.originalMaterialColors.get(material.uuid);
+          
+          if (originalColor) {
+            material.color.copy(originalColor);
+          }
+        }
+      });
+      
+      // Clear the stored colors
+      this.winter.originalMaterialColors.clear();
     }
 
     pause() {
