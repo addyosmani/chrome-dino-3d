@@ -295,33 +295,38 @@ class EffectsManager {
             originalColor.getHSL(h);
             
             // Winter color transformation logic:
-            // - Greens (hue ~0.3) -> Blue-whites (hue ~0.55-0.65)
-            // - Browns/yellows (hue ~0.1) -> Grays/blues (hue ~0.6)
-            // - Reduce saturation for snowy/icy look
-            // - Increase lightness for winter brightness
+            // AGGRESSIVE transformation to match target aesthetic
+            // - Transform ALL colors to blue/white winter palette
+            // - Heavily desaturate for snowy/icy look
+            // - Significantly increase lightness for bright winter feel
             
-            let newHue = h.h;
-            let newSat = h.s;
-            let newLight = h.l;
+            let newHue;
+            let newSat;
+            let newLight;
             
-            // Transform green hues (0.2-0.4) to blue-white hues (0.55-0.65)
-            if (h.h >= 0.2 && h.h <= 0.4) {
-              newHue = 0.55 + (h.h - 0.2) * 0.5; // Map to blue range
-              newSat = h.s * 0.4; // Reduce saturation for icy look
-              newLight = Math.min(1.0, h.l * 1.3 + 0.15); // Increase brightness
+            // Transform green hues (0.15-0.45) - cacti, trees, dinosaur
+            if (h.h >= 0.15 && h.h <= 0.45) {
+              newHue = 0.58; // Strong blue hue
+              newSat = Math.max(0.15, h.s * 0.25); // Heavy desaturation, minimum color
+              newLight = Math.min(1.0, h.l * 1.5 + 0.25); // Much brighter
             }
-            // Transform yellow/brown hues (0.05-0.2) to blue-gray (0.55-0.6)
-            else if (h.h >= 0.05 && h.h <= 0.2) {
-              newHue = 0.58; // Blue-gray hue
-              newSat = h.s * 0.3; // Desaturate
-              newLight = Math.min(1.0, h.l * 1.2 + 0.1); // Lighten
+            // Transform yellow/brown/orange hues (0.0-0.15) - desert objects
+            else if (h.h >= 0.0 && h.h <= 0.15) {
+              newHue = 0.6; // Blue-gray hue
+              newSat = Math.max(0.1, h.s * 0.2); // Heavy desaturation
+              newLight = Math.min(1.0, h.l * 1.4 + 0.2); // Much lighter
             }
-            // For other colors, desaturate and tint blue
+            // Transform red/pink hues (0.85-1.0) to blue
+            else if (h.h >= 0.85) {
+              newHue = 0.58; // Blue
+              newSat = Math.max(0.15, h.s * 0.25);
+              newLight = Math.min(1.0, h.l * 1.4 + 0.2);
+            }
+            // For all other colors, force to blue winter palette
             else {
-              newSat = h.s * 0.5;
-              newLight = Math.min(1.0, h.l * 1.15 + 0.05);
-              // Slightly shift hue toward blue
-              newHue = h.h + (0.6 - h.h) * 0.3;
+              newHue = 0.58; // Blue hue for everything
+              newSat = Math.max(0.1, h.s * 0.2); // Heavy desaturation
+              newLight = Math.min(1.0, h.l * 1.4 + 0.2); // Much brighter
             }
             
             material.color.setHSL(newHue, newSat, newLight);

@@ -2232,21 +2232,25 @@ class EffectsManager {
           const originalColor = material.color.clone();
           const h = {};
           originalColor.getHSL(h);
-          let newHue = h.h;
-          let newSat = h.s;
-          let newLight = h.l;
-          if (h.h >= 0.2 && h.h <= 0.4) {
-            newHue = 0.55 + (h.h - 0.2) * 0.5;
-            newSat = h.s * 0.4;
-            newLight = Math.min(1, h.l * 1.3 + 0.15);
-          } else if (h.h >= 0.05 && h.h <= 0.2) {
+          let newHue;
+          let newSat;
+          let newLight;
+          if (h.h >= 0.15 && h.h <= 0.45) {
             newHue = 0.58;
-            newSat = h.s * 0.3;
-            newLight = Math.min(1, h.l * 1.2 + 0.1);
+            newSat = Math.max(0.15, h.s * 0.25);
+            newLight = Math.min(1, h.l * 1.5 + 0.25);
+          } else if (h.h >= 0 && h.h <= 0.15) {
+            newHue = 0.6;
+            newSat = Math.max(0.1, h.s * 0.2);
+            newLight = Math.min(1, h.l * 1.4 + 0.2);
+          } else if (h.h >= 0.85) {
+            newHue = 0.58;
+            newSat = Math.max(0.15, h.s * 0.25);
+            newLight = Math.min(1, h.l * 1.4 + 0.2);
           } else {
-            newSat = h.s * 0.5;
-            newLight = Math.min(1, h.l * 1.15 + 0.05);
-            newHue = h.h + (0.6 - h.h) * 0.3;
+            newHue = 0.58;
+            newSat = Math.max(0.1, h.s * 0.2);
+            newLight = Math.min(1, h.l * 1.4 + 0.2);
           }
           material.color.setHSL(newHue, newSat, newLight);
         }
