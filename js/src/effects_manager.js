@@ -60,12 +60,12 @@ class EffectsManager {
           "fog": {
             "normal_day": [.91, .70, .32],
             "normal_night": [.24, .40, .55],
-            "winter": [0.19, 0.44, 0.72] // Blue winter color
+            "winter": [0.098, 0.463, 0.824] // Deep blue winter color (#1976D2)
           },
           "background": {
             "normal_day": [.91, .70, .32],
             "normal_night": [.24, .40, .55],
-            "winter": [0.19, 0.44, 0.72] // Blue winter color
+            "winter": [0.098, 0.463, 0.824] // Deep blue winter color (#1976D2)
           },
           "water": {
             "normal": 0x6EDFFF,

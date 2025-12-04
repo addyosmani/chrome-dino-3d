@@ -2060,12 +2060,12 @@ class EffectsManager {
         "fog": {
           "normal_day": [0.91, 0.7, 0.32],
           "normal_night": [0.24, 0.4, 0.55],
-          "winter": [0.19, 0.44, 0.72]
+          "winter": [0.098, 0.463, 0.824]
         },
         "background": {
           "normal_day": [0.91, 0.7, 0.32],
           "normal_night": [0.24, 0.4, 0.55],
-          "winter": [0.19, 0.44, 0.72]
+          "winter": [0.098, 0.463, 0.824]
         },
         "water": {
           "normal": 7262207,
