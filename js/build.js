@@ -2148,8 +2148,8 @@ class EffectsManager {
     this.stopTransition();
     this.changeDaytime("day");
     if (this.winter.is_active) {
-      this.winter.is_active = true;
-      this.toggleWinterMode();
+      this.restoreOriginalMaterialColors();
+      this.winter.is_active = false;
     } else {
       this.winter.originalMaterialColors.clear();
     }
@@ -2217,6 +2217,10 @@ class EffectsManager {
     }
   }
   applyWinterMaterialFilter() {
+    if (typeof scene === "undefined" || !scene) {
+      console.warn("Scene not available for winter mode material filter");
+      return;
+    }
     scene.traverse((object) => {
       if (object.isMesh && object.material) {
         const material = object.material;
@@ -2250,6 +2254,10 @@ class EffectsManager {
     });
   }
   restoreOriginalMaterialColors() {
+    if (typeof scene === "undefined" || !scene) {
+      console.warn("Scene not available for restoring material colors");
+      return;
+    }
     scene.traverse((object) => {
       if (object.isMesh && object.material) {
         const material = object.material;

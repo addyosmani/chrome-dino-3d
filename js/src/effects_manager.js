@@ -177,10 +177,10 @@ class EffectsManager {
     reset() {
       this.stopTransition();
       this.changeDaytime('day');
-      // Reset winter mode
+      // Reset winter mode properly
       if (this.winter.is_active) {
-        this.winter.is_active = true; // Set to true so toggle will turn it off
-        this.toggleWinterMode(); // This will turn it off and restore colors
+        this.restoreOriginalMaterialColors();
+        this.winter.is_active = false;
       } else {
         this.winter.originalMaterialColors.clear();
       }
@@ -268,6 +268,12 @@ class EffectsManager {
     }
 
     applyWinterMaterialFilter() {
+      // Validate scene exists
+      if (typeof scene === 'undefined' || !scene) {
+        console.warn('Scene not available for winter mode material filter');
+        return;
+      }
+      
       // Traverse the scene and apply winter color filter to all materials
       scene.traverse((object) => {
         if (object.isMesh && object.material) {
@@ -325,6 +331,12 @@ class EffectsManager {
     }
 
     restoreOriginalMaterialColors() {
+      // Validate scene exists
+      if (typeof scene === 'undefined' || !scene) {
+        console.warn('Scene not available for restoring material colors');
+        return;
+      }
+      
       // Restore all original material colors
       scene.traverse((object) => {
         if (object.isMesh && object.material) {
