@@ -85,6 +85,7 @@
       addKey(38, 'space'); // up
       addKey(32, 'space'); // space
 
+      addKey(87, 'winter_toggle'); // w
       addKey(81, 'debug_speedup'); // q
 
       window.addEventListener('keydown', (e) => {

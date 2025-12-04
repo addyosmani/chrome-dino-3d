@@ -40,6 +40,7 @@ let load_manager = new LoadManager(); // start loading assets ASAP
 
 //= effects_manager.js
 let effects = new EffectsManager();
+window.effects = effects; // Expose for debugging
 
 //= game_manager.js
 //= interface_manager.js

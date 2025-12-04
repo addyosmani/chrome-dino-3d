@@ -52,6 +52,11 @@ class GameManager {
 
             enemy.increase_velocity(10);
         }
+
+        // winter mode toggle
+        input.addKeyCallback('winter_toggle', 'justPressed', function() {
+            effects.toggleWinterMode();
+        });
     }
 
     setStarter(timeout = 600) {

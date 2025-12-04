@@ -53,6 +53,27 @@ class EffectsManager {
         "clock": new THREE.Clock()
       }
 
+      // winter mode
+      this.winter = {
+        "is_active": false,
+        "colors": {
+          "fog": {
+            "normal_day": [.91, .70, .32],
+            "normal_night": [.24, .40, .55],
+            "winter": [0.19, 0.44, 0.72] // Blue winter color
+          },
+          "background": {
+            "normal_day": [.91, .70, .32],
+            "normal_night": [.24, .40, .55],
+            "winter": [0.19, 0.44, 0.72] // Blue winter color
+          },
+          "water": {
+            "normal": 0x6EDFFF,
+            "winter": 0x5AC8FA // Brighter blue for winter water
+          }
+        }
+      }
+
       if(!config.renderer.effects) {
         this.update = function() {};
       }
@@ -155,6 +176,82 @@ class EffectsManager {
     reset() {
       this.stopTransition();
       this.changeDaytime('day');
+      this.winter.is_active = false;
+    }
+
+    toggleWinterMode() {
+      this.winter.is_active = !this.winter.is_active;
+      console.log('Winter mode toggled:', this.winter.is_active);
+      this.applyWinterMode();
+    }
+
+    applyWinterMode() {
+      if(this.winter.is_active) {
+        // Apply winter colors
+        scene.fog.color.setRGB(
+          this.winter.colors.fog.winter[0],
+          this.winter.colors.fog.winter[1],
+          this.winter.colors.fog.winter[2]
+        );
+        scene.background.setRGB(
+          this.winter.colors.background.winter[0],
+          this.winter.colors.background.winter[1],
+          this.winter.colors.background.winter[2]
+        );
+
+        // Update water color if water exists
+        if(nature.water) {
+          nature.water.material.color.setHex(this.winter.colors.water.winter);
+        }
+
+        // Store original daytime colors and update them for winter
+        if(!this.winter.originalDaytimeColors) {
+          this.winter.originalDaytimeColors = {
+            fog: {
+              day: [...this.daytime.fog.day.color],
+              night: [...this.daytime.fog.night.color]
+            },
+            background: {
+              day: [...this.daytime.background.day.color],
+              night: [...this.daytime.background.night.color]
+            }
+          };
+        }
+
+        // Set winter as both day and night color
+        this.daytime.fog.day.color = [...this.winter.colors.fog.winter];
+        this.daytime.fog.night.color = [...this.winter.colors.fog.winter];
+        this.daytime.background.day.color = [...this.winter.colors.background.winter];
+        this.daytime.background.night.color = [...this.winter.colors.background.winter];
+      } else {
+        // Restore normal colors
+        if(this.winter.originalDaytimeColors) {
+          this.daytime.fog.day.color = [...this.winter.originalDaytimeColors.fog.day];
+          this.daytime.fog.night.color = [...this.winter.originalDaytimeColors.fog.night];
+          this.daytime.background.day.color = [...this.winter.originalDaytimeColors.background.day];
+          this.daytime.background.night.color = [...this.winter.originalDaytimeColors.background.night];
+        } else {
+          // Fallback to defaults
+          this.daytime.fog.day.color = this.winter.colors.fog.normal_day;
+          this.daytime.fog.night.color = this.winter.colors.fog.normal_night;
+          this.daytime.background.day.color = this.winter.colors.background.normal_day;
+          this.daytime.background.night.color = this.winter.colors.background.normal_night;
+        }
+
+        // Apply current daytime color
+        if(this.daytime.is_day) {
+          scene.fog.color.setRGB(this.daytime.fog.day.color[0], this.daytime.fog.day.color[1], this.daytime.fog.day.color[2]);
+          scene.background.setRGB(this.daytime.background.day.color[0], this.daytime.background.day.color[1], this.daytime.background.day.color[2]);
+        } else {
+          scene.fog.color.setRGB(this.daytime.fog.night.color[0], this.daytime.fog.night.color[1], this.daytime.fog.night.color[2]);
+          scene.background.setRGB(this.daytime.background.night.color[0], this.daytime.background.night.color[1], this.daytime.background.night.color[2]);
+        }
+
+        // Restore water color if water exists
+        if(nature.water) {
+          nature.water.material.color.setHex(this.winter.colors.water.normal);
+        }
+      }
     }
 
     pause() {

@@ -67,6 +67,7 @@ class InputManager {
     addKey(17, "down");
     addKey(38, "space");
     addKey(32, "space");
+    addKey(87, "winter_toggle");
     addKey(81, "debug_speedup");
     // Event listeners for keyboard support
     window.addEventListener('keydown', (e) => setKeyFromKeyCode(e.keyCode, true));
@@ -2053,6 +2054,25 @@ class EffectsManager {
       },
       "clock": new THREE.Clock()
     };
+    this.winter = {
+      "is_active": false,
+      "colors": {
+        "fog": {
+          "normal_day": [0.91, 0.7, 0.32],
+          "normal_night": [0.24, 0.4, 0.55],
+          "winter": [0.19, 0.44, 0.72]
+        },
+        "background": {
+          "normal_day": [0.91, 0.7, 0.32],
+          "normal_night": [0.24, 0.4, 0.55],
+          "winter": [0.19, 0.44, 0.72]
+        },
+        "water": {
+          "normal": 7262207,
+          "winter": 5950714
+        }
+      }
+    };
     if (!config.renderer.effects) {
       this.update = function () {
       };
@@ -2126,6 +2146,67 @@ class EffectsManager {
   reset() {
     this.stopTransition();
     this.changeDaytime("day");
+    this.winter.is_active = false;
+  }
+  toggleWinterMode() {
+    this.winter.is_active = !this.winter.is_active;
+    console.log("Winter mode toggled:", this.winter.is_active);
+    this.applyWinterMode();
+  }
+  applyWinterMode() {
+    if (this.winter.is_active) {
+      scene.fog.color.setRGB(
+        this.winter.colors.fog.winter[0],
+        this.winter.colors.fog.winter[1],
+        this.winter.colors.fog.winter[2]
+      );
+      scene.background.setRGB(
+        this.winter.colors.background.winter[0],
+        this.winter.colors.background.winter[1],
+        this.winter.colors.background.winter[2]
+      );
+      if (nature.water) {
+        nature.water.material.color.setHex(this.winter.colors.water.winter);
+      }
+      if (!this.winter.originalDaytimeColors) {
+        this.winter.originalDaytimeColors = {
+          fog: {
+            day: [...this.daytime.fog.day.color],
+            night: [...this.daytime.fog.night.color]
+          },
+          background: {
+            day: [...this.daytime.background.day.color],
+            night: [...this.daytime.background.night.color]
+          }
+        };
+      }
+      this.daytime.fog.day.color = [...this.winter.colors.fog.winter];
+      this.daytime.fog.night.color = [...this.winter.colors.fog.winter];
+      this.daytime.background.day.color = [...this.winter.colors.background.winter];
+      this.daytime.background.night.color = [...this.winter.colors.background.winter];
+    } else {
+      if (this.winter.originalDaytimeColors) {
+        this.daytime.fog.day.color = [...this.winter.originalDaytimeColors.fog.day];
+        this.daytime.fog.night.color = [...this.winter.originalDaytimeColors.fog.night];
+        this.daytime.background.day.color = [...this.winter.originalDaytimeColors.background.day];
+        this.daytime.background.night.color = [...this.winter.originalDaytimeColors.background.night];
+      } else {
+        this.daytime.fog.day.color = this.winter.colors.fog.normal_day;
+        this.daytime.fog.night.color = this.winter.colors.fog.normal_night;
+        this.daytime.background.day.color = this.winter.colors.background.normal_day;
+        this.daytime.background.night.color = this.winter.colors.background.normal_night;
+      }
+      if (this.daytime.is_day) {
+        scene.fog.color.setRGB(this.daytime.fog.day.color[0], this.daytime.fog.day.color[1], this.daytime.fog.day.color[2]);
+        scene.background.setRGB(this.daytime.background.day.color[0], this.daytime.background.day.color[1], this.daytime.background.day.color[2]);
+      } else {
+        scene.fog.color.setRGB(this.daytime.fog.night.color[0], this.daytime.fog.night.color[1], this.daytime.fog.night.color[2]);
+        scene.background.setRGB(this.daytime.background.night.color[0], this.daytime.background.night.color[1], this.daytime.background.night.color[2]);
+      }
+      if (nature.water) {
+        nature.water.material.color.setHex(this.winter.colors.water.normal);
+      }
+    }
   }
   pause() {
     this.pause_time = this.daytime.clock.getElapsedTime();
@@ -2178,6 +2259,7 @@ class EffectsManager {
   }
 }
 let effects = new EffectsManager();
+window.effects = effects;
 
 class TranslationManager {
   constructor() {
@@ -2490,6 +2572,9 @@ class GameManager {
       });
       enemy.increase_velocity(10);
     }
+    input.addKeyCallback("winter_toggle", "justPressed", function () {
+      effects.toggleWinterMode();
+    });
   }
 
   async initLocalModels() {
